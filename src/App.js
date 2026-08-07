@@ -218,18 +218,14 @@ function ResultPoster({ d, positions, onMove, editMode }) {
         </DragText>
       </div>
       {/* MIDDLE */}
-      <div style={{flex:"0 0 20%",position:"relative",display:"flex",alignItems:"center",justifyContent:"center",gap:16,padding:"0 6%"}}>
-        <div style={{position:"relative",width:70,height:70,flexShrink:0}}>
-          <DragText id="homeLogo" positions={positions} onMove={onMove} style={{border:db,padding:dp,borderRadius:8}}>
+      <div style={{flex:"0 0 20%",position:"relative"}}>
+        <DragText id="matchup" positions={positions} onMove={onMove} style={{border:db,padding:dp,borderRadius:8,whiteSpace:"nowrap"}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:16}}>
             <LogoBox src={d.homeLogo} alt="Heim"/>
-          </DragText>
-        </div>
-        <div style={{fontFamily:TITLE_FONT,fontWeight:900,fontSize:"clamp(16px,5.5vw,30px)",color:PAINT,position:"relative",zIndex:2}}>VS</div>
-        <div style={{position:"relative",width:70,height:70,flexShrink:0}}>
-          <DragText id="awayLogo" positions={positions} onMove={onMove} style={{border:db,padding:dp,borderRadius:8}}>
+            <div style={{fontFamily:TITLE_FONT,fontWeight:900,fontSize:"clamp(16px,5.5vw,30px)",color:PAINT}}>VS</div>
             <LogoBox src={d.awayLogo} alt="Gast"/>
-          </DragText>
-        </div>
+          </div>
+        </DragText>
       </div>
       {/* BOTTOM */}
       <div style={{flex:1,position:"relative"}}>
@@ -303,18 +299,14 @@ function MatchdayPoster({ d, caption, positions, onMove, editMode }) {
         </DragText>
       </div>
       {/* MIDDLE */}
-      <div style={{flex:"0 0 26%",position:"relative",display:"flex",alignItems:"center",justifyContent:"center",gap:16,padding:"0 5%"}}>
-        <div style={{position:"relative",width:70,height:70,flexShrink:0}}>
-          <DragText id="homeLogo" positions={positions} onMove={onMove} style={{border:db,padding:dp,borderRadius:8}}>
+      <div style={{flex:"0 0 26%",position:"relative"}}>
+        <DragText id="matchup" positions={positions} onMove={onMove} style={{border:db,padding:dp,borderRadius:8,whiteSpace:"nowrap"}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:16}}>
             <LogoBox src={d.homeLogo} alt="Heim"/>
-          </DragText>
-        </div>
-        <div style={{fontFamily:TITLE_FONT,fontWeight:900,fontSize:"clamp(16px,5.5vw,30px)",color:PAINT,position:"relative",zIndex:2}}>VS</div>
-        <div style={{position:"relative",width:70,height:70,flexShrink:0}}>
-          <DragText id="awayLogo" positions={positions} onMove={onMove} style={{border:db,padding:dp,borderRadius:8}}>
+            <div style={{fontFamily:TITLE_FONT,fontWeight:900,fontSize:"clamp(16px,5.5vw,30px)",color:PAINT}}>VS</div>
             <LogoBox src={d.awayLogo} alt="Gast"/>
-          </DragText>
-        </div>
+          </div>
+        </DragText>
       </div>
       {/* BOTTOM */}
       <div style={{flex:1,position:"relative"}}>
