@@ -93,7 +93,7 @@ function SplashBottom({ dim }) {
 
 function DragText({ id, positions, onMove, children, style }) {
   const dragging = useRef(false);
-  const start = useRef({mx:0,my:0,ox:0,oy:0});
+  const start = useRef({mx:0,my:0,ox:0,oy:0,baseDX:0,baseDY:0});
   const elRef = useRef(null);
   const pos = positions[id] || {x:0,y:0};
 
@@ -101,8 +101,8 @@ function DragText({ id, positions, onMove, children, style }) {
     const frame = elRef.current && elRef.current.closest('[data-poster-frame]');
     const guide = frame && frame.querySelector(`[data-guide="${axis}"]`);
     if (guide) {
-      guide.style.opacity = active ? "1" : "0.45";
-      guide.style.borderColor = active ? "#ff2f7e" : "rgba(255,60,120,0.55)";
+      guide.style.opacity = active ? "1" : "0.55";
+      guide.style.borderColor = active ? "#ff2f7e" : "rgba(255,60,120,0.6)";
     }
   };
 
@@ -110,19 +110,16 @@ function DragText({ id, positions, onMove, children, style }) {
     if (!dragging.current) return;
     e.preventDefault();
     const cl = e.touches ? e.touches[0] : e;
-    let nx = start.current.ox+(cl.clientX-start.current.mx);
-    let ny = start.current.oy+(cl.clientY-start.current.my);
+    const mdx = cl.clientX - start.current.mx;
+    const mdy = cl.clientY - start.current.my;
+    let nx = start.current.ox + mdx;
+    let ny = start.current.oy + mdy;
 
-    const frame = elRef.current && elRef.current.closest('[data-poster-frame]');
-    if (frame && elRef.current) {
-      const THRESH = 10;
-      const frameRect = frame.getBoundingClientRect();
-      const elRect = elRef.current.getBoundingClientRect();
-      const dx = (elRect.left + elRect.width/2) - (frameRect.left + frameRect.width/2);
-      const dy = (elRect.top + elRect.height/2) - (frameRect.top + frameRect.height/2);
-      if (Math.abs(dx) < THRESH) { nx -= dx; setGuide("v", true); } else setGuide("v", false);
-      if (Math.abs(dy) < THRESH) { ny -= dy; setGuide("h", true); } else setGuide("h", false);
-    }
+    const THRESH = 10;
+    const curDX = start.current.baseDX + mdx;
+    const curDY = start.current.baseDY + mdy;
+    if (Math.abs(curDX) < THRESH) { nx -= curDX; setGuide("v", true); } else setGuide("v", false);
+    if (Math.abs(curDY) < THRESH) { ny -= curDY; setGuide("h", true); } else setGuide("h", false);
 
     onMove(id, {x: nx, y: ny});
   };
@@ -139,7 +136,15 @@ function DragText({ id, positions, onMove, children, style }) {
     e.preventDefault();
     dragging.current = true;
     const cl = e.touches ? e.touches[0] : e;
-    start.current = {mx:cl.clientX, my:cl.clientY, ox:pos.x, oy:pos.y};
+    let baseDX = 0, baseDY = 0;
+    const frame = elRef.current && elRef.current.closest('[data-poster-frame]');
+    if (frame && elRef.current) {
+      const frameRect = frame.getBoundingClientRect();
+      const elRect = elRef.current.getBoundingClientRect();
+      baseDX = (elRect.left + elRect.width/2) - (frameRect.left + frameRect.width/2);
+      baseDY = (elRect.top + elRect.height/2) - (frameRect.top + frameRect.height/2);
+    }
+    start.current = {mx:cl.clientX, my:cl.clientY, ox:pos.x, oy:pos.y, baseDX, baseDY};
     window.addEventListener("mousemove", move2);
     window.addEventListener("mouseup", up);
     window.addEventListener("touchmove", move2, {passive:false});
@@ -228,8 +233,8 @@ function PosterFrame({ aspect, children, editMode }) {
         </div>
         {editMode && (
           <>
-            <div data-guide="v" style={{position:"absolute",left:"50%",top:0,bottom:0,width:0,borderLeft:"1.5px dashed rgba(255,60,120,0.45)",zIndex:50,pointerEvents:"none",transition:"border-color .1s"}}/>
-            <div data-guide="h" style={{position:"absolute",top:"50%",left:0,right:0,height:0,borderTop:"1.5px dashed rgba(255,60,120,0.45)",zIndex:50,pointerEvents:"none",transition:"border-color .1s"}}/>
+            <div data-guide="v" style={{position:"absolute",left:"50%",top:0,bottom:0,width:0,borderLeft:"2px dashed rgba(255,60,120,0.6)",zIndex:50,pointerEvents:"none",transition:"border-color .1s"}}/>
+            <div data-guide="h" style={{position:"absolute",top:"50%",left:0,right:0,height:0,borderTop:"2px dashed rgba(255,60,120,0.6)",zIndex:50,pointerEvents:"none",transition:"border-color .1s"}}/>
           </>
         )}
       </div>
