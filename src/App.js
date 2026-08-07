@@ -189,7 +189,7 @@ function BrushUnderline({ width="58%" }) {
   );
 }
 
-function PosterFrame({ aspect, children }) {
+function PosterFrame({ aspect, children, editMode }) {
   const [w, h] = aspect.split("/").map(Number);
   const pctHeight = (h / w) * 100;
   return (
@@ -199,6 +199,12 @@ function PosterFrame({ aspect, children }) {
         <div style={{position:"relative",zIndex:2,height:"100%",display:"flex",flexDirection:"column"}}>
           {children}
         </div>
+        {editMode && (
+          <>
+            <div style={{position:"absolute",left:"50%",top:0,bottom:0,width:0,borderLeft:"1.5px dashed rgba(255,60,120,0.6)",zIndex:50,pointerEvents:"none"}}/>
+            <div style={{position:"absolute",top:"50%",left:0,right:0,height:0,borderTop:"1.5px dashed rgba(255,60,120,0.6)",zIndex:50,pointerEvents:"none"}}/>
+          </>
+        )}
       </div>
     </div>
   );
@@ -210,7 +216,7 @@ function ResultPoster({ d, positions, onMove, editMode }) {
   const db = editMode ? "1px dashed rgba(20,30,90,0.5)" : "none";
   const dp = editMode ? "4px 8px" : "0";
   return (
-    <PosterFrame aspect={fmt.ratio}>
+    <PosterFrame aspect={fmt.ratio} editMode={editMode}>
       {d.bgImage && (
         <div style={{position:"absolute",inset:0,zIndex:0,overflow:"hidden"}}>
           <img src={d.bgImage} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",opacity:(d.bgOpacity??20)/100,transform:`scale(${(d.bgScale??100)/100}) translate(${d.bgX??0}%, ${d.bgY??0}%)`,transformOrigin:"center"}}/>
@@ -291,7 +297,7 @@ function MatchdayPoster({ d, caption, positions, onMove, editMode }) {
   const db = editMode ? "1px dashed rgba(20,30,90,0.5)" : "none";
   const dp = editMode ? "4px 8px" : "0";
   return (
-    <PosterFrame aspect={fmt.ratio}>
+    <PosterFrame aspect={fmt.ratio} editMode={editMode}>
       {d.bgImage && (
         <div style={{position:"absolute",inset:0,zIndex:0,overflow:"hidden"}}>
           <img src={d.bgImage} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",opacity:(d.bgOpacity??20)/100,transform:`scale(${(d.bgScale??100)/100}) translate(${d.bgX??0}%, ${d.bgY??0}%)`,transformOrigin:"center"}}/>
@@ -377,7 +383,7 @@ function SchedulePoster({ d, logoLib, positions, onMove, editMode }) {
   const logoSize = Math.round(70*scale);
 
   return (
-    <PosterFrame aspect={fmt.ratio}>
+    <PosterFrame aspect={fmt.ratio} editMode={editMode}>
       {d.bgImage && (
         <div style={{position:"absolute",inset:0,zIndex:0,overflow:"hidden"}}>
           <img src={d.bgImage} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",opacity:(d.bgOpacity??20)/100,transform:`scale(${(d.bgScale??100)/100}) translate(${d.bgX??0}%, ${d.bgY??0}%)`,transformOrigin:"center"}}/>
