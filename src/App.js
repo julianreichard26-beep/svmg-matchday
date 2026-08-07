@@ -148,11 +148,17 @@ function PaintCorner({ corner }) {
       transform: isBR ? "rotate(180deg)" : "none",
       zIndex:1, pointerEvents:"none",
     }} preserveAspectRatio="none">
-      <path d="M0,0 L170,0 L120,22 L150,40 L85,58 L115,78 L55,96 L75,118 L20,132 L35,158 L0,150 Z" fill={PAINT} opacity="0.92"/>
-      <path d="M0,0 L95,0 L60,14 L80,26 L35,40 L0,32 Z" fill="#ffffff" opacity="0.14"/>
-      <circle cx="185" cy="60" r="6" fill={PAINT} opacity="0.7"/>
-      <circle cx="200" cy="90" r="3.5" fill={PAINT} opacity="0.5"/>
-      <circle cx="40" cy="168" r="4.5" fill={PAINT} opacity="0.55"/>
+      <path d="M0,0 L165,0
+               C130,18 148,30 118,42
+               C142,56 108,66 128,82
+               C96,92 112,108 82,116
+               C100,132 68,140 82,158
+               C52,164 62,178 32,178
+               L0,178 Z" fill={PAINT} opacity="0.92"/>
+      <path d="M0,0 L90,0 C68,10 78,20 52,28 C64,38 40,42 46,52 L0,38 Z" fill="#ffffff" opacity="0.13"/>
+      <circle cx="182" cy="55" r="6" fill={PAINT} opacity="0.7"/>
+      <circle cx="198" cy="84" r="3.5" fill={PAINT} opacity="0.5"/>
+      <circle cx="35" cy="188" r="4.5" fill={PAINT} opacity="0.55"/>
     </svg>
   );
 }
@@ -176,7 +182,7 @@ function ChevronAccent({ side }) {
 function BrushUnderline({ width="58%" }) {
   return (
     <svg viewBox="0 0 300 22" style={{width, display:"block", margin:"6px auto 0"}}>
-      <path d="M5,12 Q45,3 90,10 T180,9 T295,13" stroke={PAINT} strokeWidth="8" fill="none" strokeLinecap="round" opacity="0.9"/>
+      <path d="M5,11 C40,4 60,17 95,10 C130,3 150,16 185,9 C215,4 235,15 295,10" stroke={PAINT} strokeWidth="8" fill="none" strokeLinecap="round" opacity="0.9"/>
     </svg>
   );
 }
