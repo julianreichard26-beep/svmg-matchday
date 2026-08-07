@@ -190,14 +190,10 @@ function BrushUnderline({ width="58%" }) {
 function PosterFrame({ aspect, children }) {
   return (
     <div style={{width:"100%",aspectRatio:aspect,position:"relative",borderRadius:14,overflow:"hidden",background:"#ffffff",boxShadow:"0 8px 40px rgba(20,30,90,0.25)",border:"2px solid rgba(20,30,90,0.08)"}}>
-      <PaintCorner corner="tl"/>
-      <PaintCorner corner="br"/>
-      <ChevronAccent side="right"/>
-      <ChevronAccent side="left"/>
-      <div style={{position:"absolute",inset:"4.5%",border:`1.5px solid ${PAINT}`,opacity:0.5,zIndex:0,pointerEvents:"none"}}/>
       <div style={{position:"relative",zIndex:2,height:"100%",display:"flex",flexDirection:"column"}}>
         {children}
       </div>
+
     </div>
   );
 }
@@ -215,15 +211,9 @@ function ResultPoster({ d, positions, onMove, editMode }) {
         </div>
       )}
       {/* TOP */}
-      <div style={{flex:"0 0 24%",position:"relative",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",paddingTop:"2%"}}>
-        <DragText id="resulttitle" positions={positions} onMove={onMove} style={{border:db,padding:dp,borderRadius:4,textAlign:"center",whiteSpace:"nowrap"}}>
-          <div style={{position:"relative",zIndex:2,textAlign:"center"}}>
-            <div style={{fontFamily:TITLE_FONT,fontWeight:900,fontSize:"clamp(22px,7.5vw,40px)",color:PAINT,letterSpacing:1,lineHeight:1,textTransform:"uppercase"}}>Spielbericht</div>
-            <BrushUnderline width="46%"/>
-          </div>
-        </DragText>
-        <DragText id="date" positions={positions} onMove={onMove} style={{border:db,padding:dp,borderRadius:4,textAlign:"center",top:"78%",whiteSpace:"nowrap"}}>
-          <div style={{fontFamily:d.font,fontStyle:"italic",fontWeight:700,fontSize:"clamp(12px,4vw,18px)",color:INK,position:"relative",zIndex:2}}>{dateStr||"Datum"}</div>
+      <div style={{flex:"0 0 20%",position:"relative",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",paddingTop:"2%"}}>
+        <DragText id="date" positions={positions} onMove={onMove} style={{border:db,padding:dp,borderRadius:4,textAlign:"center",whiteSpace:"nowrap"}}>
+          <div style={{fontFamily:d.font,fontStyle:"italic",fontWeight:700,fontSize:"clamp(15px,5vw,24px)",color:INK,position:"relative",zIndex:2}}>{dateStr||"Datum"}</div>
           {d.league && <div style={{fontSize:"clamp(9px,2.2vw,11px)",color:"rgba(20,40,150,0.55)",letterSpacing:1,textTransform:"uppercase",position:"relative",zIndex:2}}>{d.league}</div>}
         </DragText>
       </div>
@@ -298,17 +288,9 @@ function MatchdayPoster({ d, caption, positions, onMove, editMode }) {
         </div>
       )}
       {/* TOP */}
-      <div style={{flex:"0 0 38%",position:"relative",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",paddingTop:"2%"}}>
-        <DragText id="title" positions={positions} onMove={onMove} style={{border:db,padding:dp,borderRadius:4,textAlign:"center",whiteSpace:"nowrap"}}>
-          <div style={{position:"relative",zIndex:2,textAlign:"center"}}>
-            <div style={{fontFamily:TITLE_FONT,fontWeight:900,fontSize:"clamp(28px,9.5vw,54px)",color:PAINT,letterSpacing:1,lineHeight:1,textTransform:"uppercase"}}>
-              {d.matchday?d.matchday+". ":""}Spieltag
-            </div>
-            <BrushUnderline width="52%"/>
-          </div>
-        </DragText>
-        <DragText id="date" positions={positions} onMove={onMove} style={{border:db,padding:dp,borderRadius:4,textAlign:"center",top:"74%",whiteSpace:"nowrap"}}>
-          {dateStr && <div style={{fontFamily:d.font,fontStyle:"italic",fontWeight:700,fontSize:"clamp(13px,4.5vw,22px)",color:INK,position:"relative",zIndex:2}}>{dateStr}</div>}
+      <div style={{flex:"0 0 22%",position:"relative",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",paddingTop:"2%"}}>
+        <DragText id="date" positions={positions} onMove={onMove} style={{border:db,padding:dp,borderRadius:4,textAlign:"center",whiteSpace:"nowrap"}}>
+          {dateStr && <div style={{fontFamily:d.font,fontStyle:"italic",fontWeight:700,fontSize:"clamp(15px,5vw,24px)",color:INK,position:"relative",zIndex:2}}>{dateStr}</div>}
           {d.league && <div style={{fontSize:"clamp(9px,2.5vw,12px)",color:"rgba(20,40,150,0.55)",marginTop:2,letterSpacing:1,textTransform:"uppercase",position:"relative",zIndex:2}}>{d.league}</div>}
         </DragText>
       </div>
@@ -394,7 +376,6 @@ function SchedulePoster({ d, logoLib, positions, onMove, editMode }) {
             <div style={{fontFamily:TITLE_FONT,fontWeight:900,fontSize:"clamp(24px,8.5vw,46px)",color:PAINT,letterSpacing:1,lineHeight:1,textTransform:"uppercase"}}>
               {d.scheduleTitle || "TEAM I"}
             </div>
-            <BrushUnderline width="48%"/>
           </div>
         </DragText>
       </div>
