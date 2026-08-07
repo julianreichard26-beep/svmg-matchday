@@ -94,15 +94,42 @@ function SplashBottom({ dim }) {
 function DragText({ id, positions, onMove, children, style }) {
   const dragging = useRef(false);
   const start = useRef({mx:0,my:0,ox:0,oy:0});
+  const elRef = useRef(null);
   const pos = positions[id] || {x:0,y:0};
+
+  const setGuide = (axis, active) => {
+    const frame = elRef.current && elRef.current.closest('[data-poster-frame]');
+    const guide = frame && frame.querySelector(`[data-guide="${axis}"]`);
+    if (guide) {
+      guide.style.opacity = active ? "1" : "0.45";
+      guide.style.borderColor = active ? "#ff2f7e" : "rgba(255,60,120,0.55)";
+    }
+  };
+
   const move2 = e => {
     if (!dragging.current) return;
     e.preventDefault();
     const cl = e.touches ? e.touches[0] : e;
-    onMove(id, {x: start.current.ox+(cl.clientX-start.current.mx), y: start.current.oy+(cl.clientY-start.current.my)});
+    let nx = start.current.ox+(cl.clientX-start.current.mx);
+    let ny = start.current.oy+(cl.clientY-start.current.my);
+
+    const frame = elRef.current && elRef.current.closest('[data-poster-frame]');
+    if (frame && elRef.current) {
+      const THRESH = 10;
+      const frameRect = frame.getBoundingClientRect();
+      const elRect = elRef.current.getBoundingClientRect();
+      const dx = (elRect.left + elRect.width/2) - (frameRect.left + frameRect.width/2);
+      const dy = (elRect.top + elRect.height/2) - (frameRect.top + frameRect.height/2);
+      if (Math.abs(dx) < THRESH) { nx -= dx; setGuide("v", true); } else setGuide("v", false);
+      if (Math.abs(dy) < THRESH) { ny -= dy; setGuide("h", true); } else setGuide("h", false);
+    }
+
+    onMove(id, {x: nx, y: ny});
   };
   const up = () => {
     dragging.current = false;
+    setGuide("v", false);
+    setGuide("h", false);
     window.removeEventListener("mousemove", move2);
     window.removeEventListener("mouseup", up);
     window.removeEventListener("touchmove", move2);
@@ -119,7 +146,7 @@ function DragText({ id, positions, onMove, children, style }) {
     window.addEventListener("touchend", up);
   };
   return (
-    <div onMouseDown={down} onTouchStart={down} style={{position:"absolute",left:"50%",top:"50%",transform:`translate(calc(-50% + ${pos.x}px), calc(-50% + ${pos.y}px))`,cursor:"grab",userSelect:"none",zIndex:10,...style}}>
+    <div ref={elRef} onMouseDown={down} onTouchStart={down} style={{position:"absolute",left:"50%",top:"50%",transform:`translate(calc(-50% + ${pos.x}px), calc(-50% + ${pos.y}px))`,cursor:"grab",userSelect:"none",zIndex:10,...style}}>
       {children}
     </div>
   );
@@ -195,14 +222,14 @@ function PosterFrame({ aspect, children, editMode }) {
   return (
     <div style={{width:"100%",position:"relative"}}>
       <div style={{width:"100%",paddingBottom:`${pctHeight}%`}}/>
-      <div style={{position:"absolute",inset:0,borderRadius:14,overflow:"hidden",background:"#ffffff",boxShadow:"0 8px 40px rgba(20,30,90,0.25)",border:"2px solid rgba(20,30,90,0.08)"}}>
+      <div data-poster-frame style={{position:"absolute",inset:0,borderRadius:14,overflow:"hidden",background:"#ffffff",boxShadow:"0 8px 40px rgba(20,30,90,0.25)",border:"2px solid rgba(20,30,90,0.08)"}}>
         <div style={{position:"relative",zIndex:2,height:"100%",display:"flex",flexDirection:"column"}}>
           {children}
         </div>
         {editMode && (
           <>
-            <div style={{position:"absolute",left:"50%",top:0,bottom:0,width:0,borderLeft:"1.5px dashed rgba(255,60,120,0.6)",zIndex:50,pointerEvents:"none"}}/>
-            <div style={{position:"absolute",top:"50%",left:0,right:0,height:0,borderTop:"1.5px dashed rgba(255,60,120,0.6)",zIndex:50,pointerEvents:"none"}}/>
+            <div data-guide="v" style={{position:"absolute",left:"50%",top:0,bottom:0,width:0,borderLeft:"1.5px dashed rgba(255,60,120,0.45)",zIndex:50,pointerEvents:"none",transition:"border-color .1s"}}/>
+            <div data-guide="h" style={{position:"absolute",top:"50%",left:0,right:0,height:0,borderTop:"1.5px dashed rgba(255,60,120,0.45)",zIndex:50,pointerEvents:"none",transition:"border-color .1s"}}/>
           </>
         )}
       </div>
