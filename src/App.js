@@ -127,10 +127,10 @@ function DragText({ id, positions, onMove, children, style }) {
 
 function LogoBox({ src, alt, size=70 }) {
   return (
-    <div style={{width:size,height:size,borderRadius:size*0.14,background:"#fff",border:"2px solid rgba(20,40,150,0.12)",flexShrink:0,boxShadow:"0 2px 8px rgba(20,30,90,0.15)",position:"relative",overflow:"hidden"}}>
+    <div style={{width:size,height:size,borderRadius:size*0.14,background:"#fff",border:"2px solid rgba(20,40,150,0.12)",flexShrink:0,boxShadow:"0 2px 8px rgba(20,30,90,0.15)",display:"flex",alignItems:"center",justifyContent:"center",padding:size*0.06,boxSizing:"border-box",overflow:"hidden"}}>
       {src
-        ? <div role="img" aria-label={alt} style={{position:"absolute",top:size*0.06,left:size*0.06,right:size*0.06,bottom:size*0.06,backgroundImage:`url(${src})`,backgroundSize:"contain",backgroundPosition:"center",backgroundRepeat:"no-repeat"}}/>
-        : <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:size*0.4}}>🛡️</div>
+        ? <img src={src} alt={alt} style={{maxWidth:"100%",maxHeight:"100%",width:"auto",height:"auto",display:"block"}}/>
+        : <span style={{fontSize:size*0.4}}>🛡️</span>
       }
     </div>
   );
@@ -213,7 +213,7 @@ function ResultPoster({ d, positions, onMove, editMode }) {
     <PosterFrame aspect={fmt.ratio}>
       {d.bgImage && (
         <div style={{position:"absolute",inset:0,zIndex:0,overflow:"hidden"}}>
-          <div style={{position:"absolute",inset:0,backgroundImage:`url(${d.bgImage})`,backgroundSize:"cover",backgroundPosition:"center",backgroundRepeat:"no-repeat",opacity:(d.bgOpacity??20)/100,transform:`scale(${(d.bgScale??100)/100}) translate(${d.bgX??0}%, ${d.bgY??0}%)`,transformOrigin:"center"}}/>
+          <img src={d.bgImage} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",opacity:(d.bgOpacity??20)/100,transform:`scale(${(d.bgScale??100)/100}) translate(${d.bgX??0}%, ${d.bgY??0}%)`,transformOrigin:"center"}}/>
         </div>
       )}
       {/* TOP */}
@@ -294,7 +294,7 @@ function MatchdayPoster({ d, caption, positions, onMove, editMode }) {
     <PosterFrame aspect={fmt.ratio}>
       {d.bgImage && (
         <div style={{position:"absolute",inset:0,zIndex:0,overflow:"hidden"}}>
-          <div style={{position:"absolute",inset:0,backgroundImage:`url(${d.bgImage})`,backgroundSize:"cover",backgroundPosition:"center",backgroundRepeat:"no-repeat",opacity:(d.bgOpacity??20)/100,transform:`scale(${(d.bgScale??100)/100}) translate(${d.bgX??0}%, ${d.bgY??0}%)`,transformOrigin:"center"}}/>
+          <img src={d.bgImage} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",opacity:(d.bgOpacity??20)/100,transform:`scale(${(d.bgScale??100)/100}) translate(${d.bgX??0}%, ${d.bgY??0}%)`,transformOrigin:"center"}}/>
         </div>
       )}
       {/* TOP */}
@@ -380,7 +380,7 @@ function SchedulePoster({ d, logoLib, positions, onMove, editMode }) {
     <PosterFrame aspect={fmt.ratio}>
       {d.bgImage && (
         <div style={{position:"absolute",inset:0,zIndex:0,overflow:"hidden"}}>
-          <div style={{position:"absolute",inset:0,backgroundImage:`url(${d.bgImage})`,backgroundSize:"cover",backgroundPosition:"center",backgroundRepeat:"no-repeat",opacity:(d.bgOpacity??20)/100,transform:`scale(${(d.bgScale??100)/100}) translate(${d.bgX??0}%, ${d.bgY??0}%)`,transformOrigin:"center"}}/>
+          <img src={d.bgImage} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",opacity:(d.bgOpacity??20)/100,transform:`scale(${(d.bgScale??100)/100}) translate(${d.bgX??0}%, ${d.bgY??0}%)`,transformOrigin:"center"}}/>
         </div>
       )}
       {/* TITLE */}
