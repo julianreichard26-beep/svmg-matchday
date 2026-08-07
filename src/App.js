@@ -188,12 +188,16 @@ function BrushUnderline({ width="58%" }) {
 }
 
 function PosterFrame({ aspect, children }) {
+  const [w, h] = aspect.split("/").map(Number);
+  const pctHeight = (h / w) * 100;
   return (
-    <div style={{width:"100%",aspectRatio:aspect,position:"relative",borderRadius:14,overflow:"hidden",background:"#ffffff",boxShadow:"0 8px 40px rgba(20,30,90,0.25)",border:"2px solid rgba(20,30,90,0.08)"}}>
-      <div style={{position:"relative",zIndex:2,height:"100%",display:"flex",flexDirection:"column"}}>
-        {children}
+    <div style={{width:"100%",position:"relative"}}>
+      <div style={{width:"100%",paddingBottom:`${pctHeight}%`}}/>
+      <div style={{position:"absolute",inset:0,borderRadius:14,overflow:"hidden",background:"#ffffff",boxShadow:"0 8px 40px rgba(20,30,90,0.25)",border:"2px solid rgba(20,30,90,0.08)"}}>
+        <div style={{position:"relative",zIndex:2,height:"100%",display:"flex",flexDirection:"column"}}>
+          {children}
+        </div>
       </div>
-
     </div>
   );
 }
