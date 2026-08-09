@@ -474,7 +474,7 @@ function SchedulePoster({ d, logoLib, positions, onMove, editMode }) {
                     <div style={{width:2,alignSelf:"stretch",background:"rgba(20,40,150,0.25)",flexShrink:0}}/>
                     <div style={{fontFamily:d.font,fontStyle:"italic",fontWeight:900,color:INK,letterSpacing:1,lineHeight:1.4,flex:1,minWidth:0}}>
                       <div style={{fontSize:px(16,5,22),whiteSpace:"nowrap"}}>{dateStr(m.date)}</div>
-                      <div style={{fontSize:px(10,3,14),color:"rgba(20,40,150,0.65)",whiteSpace:"nowrap"}}>{m.time?`${m.time} UHR`:"HH:MM UHR"}</div>
+                      <div style={{fontSize:px(10,3,14),color:INK,whiteSpace:"nowrap"}}>{m.time?`${m.time} UHR`:"HH:MM UHR"}</div>
                     </div>
                   </div>
                 );
