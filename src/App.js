@@ -49,9 +49,9 @@ const BLANK = {
   format:"square", hashtags:"#SVMG #Amateurfußball",
   homeLogoMatchday:null, awayLogoMatchday:null,
   homeLogoResult:null,   awayLogoResult:null,
-  bgImageMatchday:null, bgOpacityMatchday:35, bgScaleMatchday:100, bgXMatchday:0, bgYMatchday:0,
-  bgImageResult:null,   bgOpacityResult:35,   bgScaleResult:100,   bgXResult:0,   bgYResult:0,
-  bgImageSchedule:null, bgOpacitySchedule:35, bgScaleSchedule:100, bgXSchedule:0, bgYSchedule:0,
+  bgImageMatchday:null,
+  bgImageResult:null,
+  bgImageSchedule:null,
   scheduleTitle:"TEAM I", ownLogo:null,
   schedScale:100, schedX:0, schedY:0,
   sections:[{ name:"Testspiele", matches:[{ opponent:"", isHome:true, date:"", time:"" }] }],
@@ -549,12 +549,29 @@ export default function App() {
     saveLS("svmg_logos", updated);
   };
 
-  // Hintergrundfoto-Bibliothek
+  // Hintergrundfoto-Bibliothek — jedes Foto trägt seine eigenen Einstellungen
   const addBgPhoto = (dataUrl) => {
-    if (!dataUrl || bgLib.includes(dataUrl)) return;
-    setBgLib([...bgLib, dataUrl]);
+    if (!dataUrl) return null;
+    const existing = bgLib.find(b => b.image === dataUrl);
+    if (existing) return existing.id;
+    const id = `bg_${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
+    setBgLib([...bgLib, { id, image: dataUrl, opacity: 35, scale: 100, x: 0, y: 0 }]);
+    return id;
   };
-  const removeBgPhoto = (dataUrl) => setBgLib(bgLib.filter(b => b !== dataUrl));
+  const removeBgPhoto = (id) => {
+    setBgLib(bgLib.filter(b => b.id !== id));
+    ["Matchday","Result","Schedule"].forEach(suf => {
+      if (form[`bgImage${suf}`] === id) set(`bgImage${suf}`, null);
+    });
+  };
+  const updateBgSetting = (id, key, value) => setBgLib(bgLib.map(b => b.id===id ? {...b, [key]: value} : b));
+  const getBgEntry = id => bgLib.find(b => b.id === id) || null;
+  const bgFor = suf => {
+    const entry = getBgEntry(form[`bgImage${suf}`]);
+    return entry
+      ? { bgImage: entry.image, bgOpacity: entry.opacity, bgScale: entry.scale, bgX: entry.x, bgY: entry.y }
+      : { bgImage: null };
+  };
 
   // Kader
   const addPlayer = () => {
@@ -860,45 +877,51 @@ export default function App() {
 
           {/* Hintergrundfoto */}
           <Collapsible title={`🖼️ Hintergrundfoto — ${typeSuffix==="Matchday"?"Spieltag-Ankündigung":typeSuffix==="Result"?"Spielbericht":"Spielplan"}`} cardStyle={card}>
-            <ImgUpload label="" value={form[`bgImage${typeSuffix}`]} onChange={v=>{set(`bgImage${typeSuffix}`,v); addBgPhoto(v);}} h={110}/>
+            <ImgUpload label="" value={getBgEntry(form[`bgImage${typeSuffix}`])?.image || null} onChange={v=>{ if(!v){set(`bgImage${typeSuffix}`,null); return;} const id=addBgPhoto(v); set(`bgImage${typeSuffix}`,id); }} h={110}/>
 
             {bgLib.length>0 && (
               <div style={{marginTop:12}}>
                 <div style={{fontSize:11,color:"rgba(255,255,255,0.35)",marginBottom:6}}>Deine Fotos — zum Wechseln anklicken</div>
                 <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
-                  {bgLib.map((photo,i)=>(
-                    <div key={i} style={{position:"relative"}}>
-                      <img src={photo} alt="" onClick={()=>set(`bgImage${typeSuffix}`,photo)}
-                        style={{width:56,height:56,objectFit:"cover",borderRadius:8,cursor:"pointer",border:form[`bgImage${typeSuffix}`]===photo?"2.5px solid #6eb4ff":"2.5px solid transparent",opacity:form[`bgImage${typeSuffix}`]===photo?1:0.7}}/>
-                      <button onClick={()=>removeBgPhoto(photo)} style={{position:"absolute",top:-6,right:-6,width:18,height:18,borderRadius:"50%",background:"rgba(255,60,60,0.9)",border:"none",color:"#fff",fontSize:11,lineHeight:1,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+                  {bgLib.map(entry=>(
+                    <div key={entry.id} style={{position:"relative"}}>
+                      <img src={entry.image} alt="" onClick={()=>set(`bgImage${typeSuffix}`,entry.id)}
+                        style={{width:56,height:56,objectFit:"cover",borderRadius:8,cursor:"pointer",border:form[`bgImage${typeSuffix}`]===entry.id?"2.5px solid #6eb4ff":"2.5px solid transparent",opacity:form[`bgImage${typeSuffix}`]===entry.id?1:0.7}}/>
+                      <button onClick={()=>removeBgPhoto(entry.id)} style={{position:"absolute",top:-6,right:-6,width:18,height:18,borderRadius:"50%",background:"rgba(255,60,60,0.9)",border:"none",color:"#fff",fontSize:11,lineHeight:1,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
                     </div>
                   ))}
                 </div>
               </div>
             )}
 
-            {form[`bgImage${typeSuffix}`] && (
-              <div style={{marginTop:12,display:"flex",flexDirection:"column",gap:10}}>
-                {[
-                  {key:`bgOpacity${typeSuffix}`, label:"Helligkeit", min:5,  max:100, def:35, unit:"%"},
-                  {key:`bgScale${typeSuffix}`,   label:"Größe",      min:50, max:400, def:100, unit:"%"},
-                  {key:`bgX${typeSuffix}`,       label:"Position X", min:-50,max:50,  def:0,  unit:""},
-                  {key:`bgY${typeSuffix}`,       label:"Position Y", min:-50,max:50,  def:0,  unit:""},
-                ].map(({key,label,min,max,def,unit})=>(
-                  <div key={key} style={{display:"flex",alignItems:"center",gap:10}}>
-                    <span style={{fontSize:12,color:"rgba(255,255,255,0.5)",width:72,flexShrink:0}}>{label}</span>
-                    <input type="range" min={min} max={max} value={form[key]??def}
-                      onChange={e=>set(key,parseInt(e.target.value))}
-                      style={{flex:1,background:"transparent",border:"none",padding:0,accentColor:"#6eb4ff"}}/>
-                    <span style={{fontSize:12,color:"rgba(255,255,255,0.5)",width:38,textAlign:"right"}}>{form[key]??def}{unit}</span>
-                  </div>
-                ))}
-                <button onClick={()=>{set(`bgOpacity${typeSuffix}`,35);set(`bgScale${typeSuffix}`,100);set(`bgX${typeSuffix}`,0);set(`bgY${typeSuffix}`,0);}}
-                  style={{background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.15)",borderRadius:7,padding:"6px",color:"rgba(255,255,255,0.4)",fontSize:12,cursor:"pointer"}}>
-                  ↺ Zurücksetzen
-                </button>
-              </div>
-            )}
+            {(() => {
+              const bgId = form[`bgImage${typeSuffix}`];
+              const entry = getBgEntry(bgId);
+              if (!entry) return null;
+              return (
+                <div style={{marginTop:12,display:"flex",flexDirection:"column",gap:10}}>
+                  <div style={{fontSize:11,color:"rgba(255,255,255,0.3)"}}>Einstellungen gelten nur für dieses Foto</div>
+                  {[
+                    {key:"opacity", label:"Helligkeit", min:5,  max:100, unit:"%"},
+                    {key:"scale",   label:"Größe",      min:50, max:400, unit:"%"},
+                    {key:"x",       label:"Position X", min:-50,max:50,  unit:""},
+                    {key:"y",       label:"Position Y", min:-50,max:50,  unit:""},
+                  ].map(({key,label,min,max,unit})=>(
+                    <div key={key} style={{display:"flex",alignItems:"center",gap:10}}>
+                      <span style={{fontSize:12,color:"rgba(255,255,255,0.5)",width:72,flexShrink:0}}>{label}</span>
+                      <input type="range" min={min} max={max} value={entry[key]}
+                        onChange={e=>updateBgSetting(entry.id,key,parseInt(e.target.value))}
+                        style={{flex:1,background:"transparent",border:"none",padding:0,accentColor:"#6eb4ff"}}/>
+                      <span style={{fontSize:12,color:"rgba(255,255,255,0.5)",width:38,textAlign:"right"}}>{entry[key]}{unit}</span>
+                    </div>
+                  ))}
+                  <button onClick={()=>{updateBgSetting(entry.id,"opacity",35);updateBgSetting(entry.id,"scale",100);updateBgSetting(entry.id,"x",0);updateBgSetting(entry.id,"y",0);}}
+                    style={{background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.15)",borderRadius:7,padding:"6px",color:"rgba(255,255,255,0.4)",fontSize:12,cursor:"pointer"}}>
+                    ↺ Zurücksetzen
+                  </button>
+                </div>
+              );
+            })()}
           </Collapsible>
 
           {/* Spielplan-Editor (nur Spielplan) */}
@@ -1034,10 +1057,10 @@ export default function App() {
 
           <div ref={posterRef}>
             {isSchedule
-              ? <SchedulePoster d={{...form, bgImage:form.bgImageSchedule, bgOpacity:form.bgOpacitySchedule, bgScale:form.bgScaleSchedule, bgX:form.bgXSchedule, bgY:form.bgYSchedule}} logoLib={logoLib} positions={positions} onMove={onMove} editMode={editMode}/>
+              ? <SchedulePoster d={{...form, ...bgFor("Schedule")}} logoLib={logoLib} positions={positions} onMove={onMove} editMode={editMode}/>
               : isResult
-                ? <ResultPoster d={{...form, bgImage:form.bgImageResult, bgOpacity:form.bgOpacityResult, bgScale:form.bgScaleResult, bgX:form.bgXResult, bgY:form.bgYResult, homeLogo:form.homeLogoResult, awayLogo:form.awayLogoResult}} positions={positions} onMove={onMove} editMode={editMode}/>
-                : <MatchdayPoster d={{...form, bgImage:form.bgImageMatchday, bgOpacity:form.bgOpacityMatchday, bgScale:form.bgScaleMatchday, bgX:form.bgXMatchday, bgY:form.bgYMatchday, homeLogo:form.homeLogoMatchday, awayLogo:form.awayLogoMatchday}} caption={caption} positions={positions} onMove={onMove} editMode={editMode}/>
+                ? <ResultPoster d={{...form, ...bgFor("Result"), homeLogo:form.homeLogoResult, awayLogo:form.awayLogoResult}} positions={positions} onMove={onMove} editMode={editMode}/>
+                : <MatchdayPoster d={{...form, ...bgFor("Matchday"), homeLogo:form.homeLogoMatchday, awayLogo:form.awayLogoMatchday}} caption={caption} positions={positions} onMove={onMove} editMode={editMode}/>
             }
           </div>
 
