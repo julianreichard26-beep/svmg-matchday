@@ -378,14 +378,15 @@ function MatchdayPoster({ d, caption, positions, onMove, editMode }) {
       </div>
       {/* BOTTOM */}
       <div style={{flex:1,position:"relative"}}>
-        <DragText id="lines" positions={positions} onMove={onMove} style={{border:db,padding:dp,borderRadius:4,textAlign:"center",width:"85%"}}>
-          <div style={{position:"relative",zIndex:2}}>
-            {allLines.map((line,i)=>{
-              const sm = line.length>22 && i===allLines.length-1;
-              return <div key={i} style={{fontFamily:d.font,fontStyle:"italic",fontWeight:sm?600:700,fontSize:sm?"clamp(11px,3.5vw,16px)":"clamp(13px,5vw,26px)",color:sm?"rgba(20,40,150,0.65)":INK,lineHeight:1.3}}>{line}</div>;
-            })}
-          </div>
-        </DragText>
+        {allLines.map((line,i)=>{
+          const sm = line.length>22 && i===allLines.length-1;
+          const top = allLines.length>1 ? 12 + i*(66/(allLines.length-1)) : 40;
+          return (
+            <DragText key={i} id={`line${i}`} positions={positions} onMove={onMove} style={{border:db,padding:dp,borderRadius:4,textAlign:"center",width:"85%",top:`${top}%`}}>
+              <div style={{fontFamily:d.font,fontStyle:"italic",fontWeight:sm?600:700,fontSize:sm?"clamp(11px,3.5vw,16px)":"clamp(13px,5vw,26px)",color:sm?"rgba(20,40,150,0.65)":INK,lineHeight:1.3,position:"relative",zIndex:2}}>{line}</div>
+            </DragText>
+          );
+        })}
         {caption && (
           <DragText id="caption" positions={positions} onMove={onMove} style={{border:db,padding:dp,borderRadius:4,width:"85%",top:"80%"}}>
             <div style={{fontSize:"clamp(8px,2.2vw,11px)",color:"rgba(20,40,150,0.75)",lineHeight:1.5,background:"rgba(20,40,150,0.06)",borderRadius:7,padding:"5px 9px",textAlign:"left",position:"relative",zIndex:2}}>{caption}</div>
