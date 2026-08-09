@@ -48,6 +48,8 @@ const BLANK = {
   mood:"motivierend", font:"'Comic Sans MS','Chalkboard SE',cursive",
   format:"square", hashtags:"#SVMG #Amateurfußball",
   homeLogoMatchday:null, awayLogoMatchday:null,
+  homeTeam2:"", awayTeam2:"", homeLogoMatchday2:null, awayLogoMatchday2:null,
+  homeTeam3:"", awayTeam3:"", homeLogoMatchday3:null, awayLogoMatchday3:null,
   homeLogoResult:null,   awayLogoResult:null,
   bgImagesMatchday:[],
   bgImagesResult:[],
@@ -359,14 +361,23 @@ function MatchdayPoster({ d, caption, positions, onMove, editMode }) {
         </DragText>
       </div>
       {/* MIDDLE */}
-      <div style={{flex:"0 0 26%",position:"relative"}}>
-        <DragText id="matchup" positions={positions} onMove={onMove} style={{border:db,padding:dp,borderRadius:8,whiteSpace:"nowrap"}}>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:16}}>
-            <LogoBox src={d.homeLogo} alt="Heim"/>
-            <div style={{fontFamily:TITLE_FONT,fontWeight:900,fontSize:"clamp(16px,5.5vw,30px)",color:PAINT}}>VS</div>
-            <LogoBox src={d.awayLogo} alt="Gast"/>
-          </div>
-        </DragText>
+      <div style={{flex:"0 0 44%",position:"relative",display:"flex",flexDirection:"column",justifyContent:"center",gap:"3%"}}>
+        {[
+          {h:d.homeLogo, a:d.awayLogo, hn:d.homeTeam, an:d.awayTeam, id:"matchup"},
+          {h:d.homeLogoMatchday2, a:d.awayLogoMatchday2, hn:d.homeTeam2, an:d.awayTeam2, id:"matchup2"},
+          {h:d.homeLogoMatchday3, a:d.awayLogoMatchday3, hn:d.homeTeam3, an:d.awayTeam3, id:"matchup3"},
+        ].filter(p=>p.hn||p.an||p.h||p.a).map(p=>(
+          <DragText key={p.id} id={p.id} positions={positions} onMove={onMove} style={{border:db,padding:dp,borderRadius:8,whiteSpace:"nowrap"}}>
+            <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:14}}>
+                <LogoBox src={p.h} alt="Heim" size={56}/>
+                <div style={{fontFamily:TITLE_FONT,fontWeight:900,fontSize:"clamp(13px,4.5vw,24px)",color:PAINT}}>VS</div>
+                <LogoBox src={p.a} alt="Gast" size={56}/>
+              </div>
+              {(p.hn||p.an) && <div style={{fontFamily:d.font,fontStyle:"italic",fontWeight:700,fontSize:"clamp(10px,3vw,15px)",color:INK}}>{p.hn||"Heim"} – {p.an||"Gast"}</div>}
+            </div>
+          </DragText>
+        ))}
       </div>
       {/* BOTTOM */}
       <div style={{flex:1,position:"relative"}}>
@@ -607,6 +618,10 @@ export default function App() {
       const suffix = f.postType==="result" ? "Result" : "Matchday";
       if (updates.homeTeam !== undefined) { const l = findLogo(updates.homeTeam); if (l) next[`homeLogo${suffix}`] = l; }
       if (updates.awayTeam !== undefined) { const l = findLogo(updates.awayTeam); if (l) next[`awayLogo${suffix}`] = l; }
+      if (updates.homeTeam2 !== undefined) { const l = findLogo(updates.homeTeam2); if (l) next.homeLogoMatchday2 = l; }
+      if (updates.awayTeam2 !== undefined) { const l = findLogo(updates.awayTeam2); if (l) next.awayLogoMatchday2 = l; }
+      if (updates.homeTeam3 !== undefined) { const l = findLogo(updates.homeTeam3); if (l) next.homeLogoMatchday3 = l; }
+      if (updates.awayTeam3 !== undefined) { const l = findLogo(updates.awayTeam3); if (l) next.awayLogoMatchday3 = l; }
       return next;
     });
   };
@@ -633,7 +648,7 @@ export default function App() {
   };
 
   const set = (k,v) => {
-    if (k === "homeTeam" || k === "awayTeam") {
+    if (k === "homeTeam" || k === "awayTeam" || k === "homeTeam2" || k === "awayTeam2" || k === "homeTeam3" || k === "awayTeam3") {
       setWithAutoLogo({[k]: v});
     } else {
       setForm(f=>({...f,[k]:v}));
@@ -1014,6 +1029,26 @@ export default function App() {
                 <div><label>Spieltag</label><input value={form.matchday} onChange={e=>set("matchday",e.target.value)} placeholder="34"/></div>
                 <div style={{gridColumn:"1/-1"}}><label>Datum</label><input type="date" value={form.rawDate} onChange={e=>set("rawDate",e.target.value)}/></div>
               </div>
+            </Collapsible>
+          )}
+
+          {/* Weitere Paarungen (nur Spieltag-Ankündigung) */}
+          {!isResult && !isSchedule && (
+            <Collapsible title="⚽ Weitere Paarungen (optional)" cardStyle={card}>
+              <div style={{fontSize:11,color:"rgba(255,255,255,0.32)",marginBottom:12}}>Für mehrere Mannschaften am selben Spieltag, z. B. Team II und Team III.</div>
+              {[2,3].map(num=>(
+                <div key={num} style={{marginBottom:num===2?16:0,paddingBottom:num===2?16:0,borderBottom:num===2?"1px solid rgba(255,255,255,0.08)":"none"}}>
+                  <div style={{fontSize:12,fontWeight:700,color:"rgba(255,255,255,0.5)",marginBottom:8}}>Paarung {num}</div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
+                    <div><label>Heimteam</label><input value={form[`homeTeam${num}`]} onChange={e=>set(`homeTeam${num}`,e.target.value)} placeholder="Team II"/></div>
+                    <div><label>Gastteam</label><input value={form[`awayTeam${num}`]} onChange={e=>set(`awayTeam${num}`,e.target.value)} placeholder="Gegner II"/></div>
+                  </div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
+                    <ImgUpload label="Heim-Wappen" value={form[`homeLogoMatchday${num}`]} onChange={v=>set(`homeLogoMatchday${num}`,v)} h={80}/>
+                    <ImgUpload label="Gast-Wappen" value={form[`awayLogoMatchday${num}`]} onChange={v=>set(`awayLogoMatchday${num}`,v)} h={80}/>
+                  </div>
+                </div>
+              ))}
             </Collapsible>
           )}
 
