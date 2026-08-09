@@ -51,9 +51,9 @@ const BLANK = {
   homeTeam2:"", awayTeam2:"", homeLogoMatchday2:null, awayLogoMatchday2:null,
   homeTeam3:"", awayTeam3:"", homeLogoMatchday3:null, awayLogoMatchday3:null,
   homeLogoResult:null,   awayLogoResult:null,
-  bgImagesMatchday:[],
-  bgImagesResult:[],
-  bgImagesSchedule:[],
+  bgActiveMatchday:[], bgSettingsMatchday:{},
+  bgActiveResult:[],   bgSettingsResult:{},
+  bgActiveSchedule:[], bgSettingsSchedule:{},
   scheduleTitle:"TEAM I", ownLogo:null,
   schedScale:100, schedX:0, schedY:0,
   sections:[{ name:"Testspiele", matches:[{ opponent:"", isHome:true, date:"", time:"" }] }],
@@ -559,8 +559,7 @@ export default function App() {
     setLogoLib(updated);
     saveLS("svmg_logos", updated);
   };
-
-  // Hintergrundfoto-Bibliothek — Fotos sind gemeinsam, aber Helligkeit/Größe/Position pro Post-Typ getrennt
+  // Hintergrundfoto-Bibliothek — Fotos sind gemeinsam; Ein/Aus-Status und Einstellungen getrennt gespeichert, damit Ausblenden nichts löscht
   const addBgPhoto = (dataUrl) => {
     if (!dataUrl) return null;
     const existing = bgLib.find(b => b.image === dataUrl);
@@ -572,25 +571,37 @@ export default function App() {
   const removeBgPhoto = (id) => {
     setBgLib(bgLib.filter(b => b.id !== id));
     ["Matchday","Result","Schedule"].forEach(suf => {
-      set(`bgImages${suf}`, (form[`bgImages${suf}`]||[]).filter(l => l.photoId !== id));
+      set(`bgActive${suf}`, (form[`bgActive${suf}`]||[]).filter(x => x !== id));
+      const settings = {...(form[`bgSettings${suf}`]||{})};
+      delete settings[id];
+      set(`bgSettings${suf}`, settings);
     });
   };
   const getBgEntry = id => bgLib.find(b => b.id === id) || null;
+  const activateBgPhoto = (suf, photoId) => {
+    const active = form[`bgActive${suf}`]||[];
+    if (!active.includes(photoId)) set(`bgActive${suf}`, [...active, photoId]);
+    const settings = form[`bgSettings${suf}`]||{};
+    if (!settings[photoId]) set(`bgSettings${suf}`, {...settings, [photoId]: {opacity:35,scale:100,x:0,y:0}});
+  };
   const toggleBgLayer = (suf, photoId) => {
-    const current = form[`bgImages${suf}`]||[];
-    const exists = current.some(l => l.photoId === photoId);
-    set(`bgImages${suf}`, exists
-      ? current.filter(l => l.photoId !== photoId)
-      : [...current, { photoId, opacity:35, scale:100, x:0, y:0 }]);
+    const active = form[`bgActive${suf}`]||[];
+    if (active.includes(photoId)) set(`bgActive${suf}`, active.filter(x => x !== photoId));
+    else activateBgPhoto(suf, photoId);
   };
   const updateBgLayer = (suf, photoId, key, value) => {
-    set(`bgImages${suf}`, (form[`bgImages${suf}`]||[]).map(l => l.photoId===photoId ? {...l, [key]:value} : l));
+    const settings = form[`bgSettings${suf}`]||{};
+    const cur = settings[photoId] || {opacity:35,scale:100,x:0,y:0};
+    set(`bgSettings${suf}`, {...settings, [photoId]: {...cur, [key]: value}});
   };
   const bgFor = suf => {
-    const layers = form[`bgImages${suf}`]||[];
-    return { bgLayers: layers.map(l => {
-      const entry = getBgEntry(l.photoId);
-      return entry ? { image: entry.image, opacity: l.opacity, scale: l.scale, x: l.x, y: l.y } : null;
+    const active = form[`bgActive${suf}`]||[];
+    const settings = form[`bgSettings${suf}`]||{};
+    return { bgLayers: active.map(id => {
+      const entry = getBgEntry(id);
+      if (!entry) return null;
+      const s = settings[id] || {opacity:35,scale:100,x:0,y:0};
+      return { image: entry.image, opacity: s.opacity, scale: s.scale, x: s.x, y: s.y };
     }).filter(Boolean) };
   };
 
@@ -902,14 +913,14 @@ export default function App() {
 
           {/* Hintergrundfoto */}
           <Collapsible title={`🖼️ Hintergrundfoto — ${typeSuffix==="Matchday"?"Spieltag-Ankündigung":typeSuffix==="Result"?"Spielbericht":"Spielplan"}`} cardStyle={card}>
-            <ImgUpload label="" value={null} onChange={v=>{ if(!v) return; const id=addBgPhoto(v); const has=(form[`bgImages${typeSuffix}`]||[]).some(l=>l.photoId===id); if(!has) set(`bgImages${typeSuffix}`,[...(form[`bgImages${typeSuffix}`]||[]),{photoId:id,opacity:35,scale:100,x:0,y:0}]); }} h={110}/>
+            <ImgUpload label="" value={null} onChange={v=>{ if(!v) return; const id=addBgPhoto(v); activateBgPhoto(typeSuffix,id); }} h={110}/>
 
             {bgLib.length>0 && (
               <div style={{marginTop:12}}>
-                <div style={{fontSize:11,color:"rgba(255,255,255,0.35)",marginBottom:6}}>Deine Fotos — anklicken zum Ein-/Ausblenden (mehrere gleichzeitig möglich, Einstellungen pro Post-Typ getrennt)</div>
+                <div style={{fontSize:11,color:"rgba(255,255,255,0.35)",marginBottom:6}}>Deine Fotos — anklicken zum Ein-/Ausblenden (mehrere gleichzeitig möglich, Einstellungen bleiben beim Ausblenden erhalten)</div>
                 <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
                   {bgLib.map(entry=>{
-                    const active = (form[`bgImages${typeSuffix}`]||[]).some(l=>l.photoId===entry.id);
+                    const active = (form[`bgActive${typeSuffix}`]||[]).includes(entry.id);
                     return (
                       <div key={entry.id} style={{position:"relative"}}>
                         <img src={entry.image} alt="" onClick={()=>toggleBgLayer(typeSuffix,entry.id)}
@@ -923,11 +934,12 @@ export default function App() {
               </div>
             )}
 
-            {(form[`bgImages${typeSuffix}`]||[]).map(layer=>{
-              const entry = getBgEntry(layer.photoId);
+            {(form[`bgActive${typeSuffix}`]||[]).map(photoId=>{
+              const entry = getBgEntry(photoId);
               if (!entry) return null;
+              const s = (form[`bgSettings${typeSuffix}`]||{})[photoId] || {opacity:35,scale:100,x:0,y:0};
               return (
-                <div key={layer.photoId} style={{marginTop:14,paddingTop:12,borderTop:"1px solid rgba(255,255,255,0.08)"}}>
+                <div key={photoId} style={{marginTop:14,paddingTop:12,borderTop:"1px solid rgba(255,255,255,0.08)"}}>
                   <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
                     <img src={entry.image} alt="" style={{width:24,height:24,objectFit:"cover",borderRadius:5}}/>
                     <div style={{fontSize:11,color:"rgba(255,255,255,0.5)"}}>Einstellungen für dieses Foto — nur bei {typeSuffix==="Matchday"?"Spieltag-Ankündigung":typeSuffix==="Result"?"Spielbericht":"Spielplan"}</div>
@@ -941,13 +953,13 @@ export default function App() {
                     ].map(({key,label,min,max,unit})=>(
                       <div key={key} style={{display:"flex",alignItems:"center",gap:10}}>
                         <span style={{fontSize:12,color:"rgba(255,255,255,0.5)",width:72,flexShrink:0}}>{label}</span>
-                        <input type="range" min={min} max={max} value={layer[key]}
-                          onChange={e=>updateBgLayer(typeSuffix,layer.photoId,key,parseInt(e.target.value))}
+                        <input type="range" min={min} max={max} value={s[key]}
+                          onChange={e=>updateBgLayer(typeSuffix,photoId,key,parseInt(e.target.value))}
                           style={{flex:1,background:"transparent",border:"none",padding:0,accentColor:"#6eb4ff"}}/>
-                        <span style={{fontSize:12,color:"rgba(255,255,255,0.5)",width:38,textAlign:"right"}}>{layer[key]}{unit}</span>
+                        <span style={{fontSize:12,color:"rgba(255,255,255,0.5)",width:38,textAlign:"right"}}>{s[key]}{unit}</span>
                       </div>
                     ))}
-                    <button onClick={()=>{updateBgLayer(typeSuffix,layer.photoId,"opacity",35);updateBgLayer(typeSuffix,layer.photoId,"scale",100);updateBgLayer(typeSuffix,layer.photoId,"x",0);updateBgLayer(typeSuffix,layer.photoId,"y",0);}}
+                    <button onClick={()=>{updateBgLayer(typeSuffix,photoId,"opacity",35);updateBgLayer(typeSuffix,photoId,"scale",100);updateBgLayer(typeSuffix,photoId,"x",0);updateBgLayer(typeSuffix,photoId,"y",0);}}
                       style={{background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.15)",borderRadius:7,padding:"6px",color:"rgba(255,255,255,0.4)",fontSize:12,cursor:"pointer"}}>
                       ↺ Zurücksetzen
                     </button>
