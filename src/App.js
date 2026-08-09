@@ -49,9 +49,9 @@ const BLANK = {
   format:"square", hashtags:"#SVMG #Amateurfußball",
   homeLogoMatchday:null, awayLogoMatchday:null,
   homeLogoResult:null,   awayLogoResult:null,
-  bgImageMatchday:null,
-  bgImageResult:null,
-  bgImageSchedule:null,
+  bgImagesMatchday:[],
+  bgImagesResult:[],
+  bgImagesSchedule:[],
   scheduleTitle:"TEAM I", ownLogo:null,
   schedScale:100, schedX:0, schedY:0,
   sections:[{ name:"Testspiele", matches:[{ opponent:"", isHome:true, date:"", time:"" }] }],
@@ -271,11 +271,11 @@ function ResultPoster({ d, positions, onMove, editMode }) {
   const dp = editMode ? "4px 8px" : "0";
   return (
     <PosterFrame aspect={fmt.ratio} editMode={editMode}>
-      {d.bgImage && (
-        <div style={{position:"absolute",inset:0,zIndex:0,overflow:"hidden"}}>
-          <img src={d.bgImage} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",opacity:(d.bgOpacity??20)/100,transform:`scale(${(d.bgScale??100)/100}) translate(${d.bgX??0}%, ${d.bgY??0}%)`,transformOrigin:"center"}}/>
+      {(d.bgLayers||[]).map((layer,li) => (
+        <div key={li} style={{position:"absolute",inset:0,zIndex:0,overflow:"hidden"}}>
+          <img src={layer.image} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",opacity:(layer.opacity??20)/100,transform:`scale(${(layer.scale??100)/100}) translate(${layer.x??0}%, ${layer.y??0}%)`,transformOrigin:"center"}}/>
         </div>
-      )}
+      ))}
       {/* TOP */}
       <div style={{flex:"0 0 20%",position:"relative",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",paddingTop:"2%"}}>
         <DragText id="date" positions={positions} onMove={onMove} style={{border:db,padding:dp,borderRadius:4,textAlign:"center",whiteSpace:"nowrap"}}>
@@ -346,11 +346,11 @@ function MatchdayPoster({ d, caption, positions, onMove, editMode }) {
   const dp = editMode ? "4px 8px" : "0";
   return (
     <PosterFrame aspect={fmt.ratio} editMode={editMode}>
-      {d.bgImage && (
-        <div style={{position:"absolute",inset:0,zIndex:0,overflow:"hidden"}}>
-          <img src={d.bgImage} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",opacity:(d.bgOpacity??20)/100,transform:`scale(${(d.bgScale??100)/100}) translate(${d.bgX??0}%, ${d.bgY??0}%)`,transformOrigin:"center"}}/>
+      {(d.bgLayers||[]).map((layer,li) => (
+        <div key={li} style={{position:"absolute",inset:0,zIndex:0,overflow:"hidden"}}>
+          <img src={layer.image} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",opacity:(layer.opacity??20)/100,transform:`scale(${(layer.scale??100)/100}) translate(${layer.x??0}%, ${layer.y??0}%)`,transformOrigin:"center"}}/>
         </div>
-      )}
+      ))}
       {/* TOP */}
       <div style={{flex:"0 0 22%",position:"relative",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",paddingTop:"2%"}}>
         <DragText id="date" positions={positions} onMove={onMove} style={{border:db,padding:dp,borderRadius:4,textAlign:"center",whiteSpace:"nowrap"}}>
@@ -432,11 +432,11 @@ function SchedulePoster({ d, logoLib, positions, onMove, editMode }) {
 
   return (
     <PosterFrame aspect={fmt.ratio} editMode={editMode}>
-      {d.bgImage && (
-        <div style={{position:"absolute",inset:0,zIndex:0,overflow:"hidden"}}>
-          <img src={d.bgImage} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",opacity:(d.bgOpacity??20)/100,transform:`scale(${(d.bgScale??100)/100}) translate(${d.bgX??0}%, ${d.bgY??0}%)`,transformOrigin:"center"}}/>
+      {(d.bgLayers||[]).map((layer,li) => (
+        <div key={li} style={{position:"absolute",inset:0,zIndex:0,overflow:"hidden"}}>
+          <img src={layer.image} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",opacity:(layer.opacity??20)/100,transform:`scale(${(layer.scale??100)/100}) translate(${layer.x??0}%, ${layer.y??0}%)`,transformOrigin:"center"}}/>
         </div>
-      )}
+      ))}
       {/* TITLE */}
       <div style={{flex:"0 0 20%",position:"relative",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",paddingTop:"2%"}}>
         <DragText id="title" positions={positions} onMove={onMove} style={{border:db,padding:dp,borderRadius:4,textAlign:"center",whiteSpace:"nowrap"}}>
@@ -549,7 +549,7 @@ export default function App() {
     saveLS("svmg_logos", updated);
   };
 
-  // Hintergrundfoto-Bibliothek — jedes Foto trägt seine eigenen Einstellungen
+  // Hintergrundfoto-Bibliothek — jedes Foto trägt seine eigenen Einstellungen, mehrere gleichzeitig aktiv möglich
   const addBgPhoto = (dataUrl) => {
     if (!dataUrl) return null;
     const existing = bgLib.find(b => b.image === dataUrl);
@@ -561,16 +561,18 @@ export default function App() {
   const removeBgPhoto = (id) => {
     setBgLib(bgLib.filter(b => b.id !== id));
     ["Matchday","Result","Schedule"].forEach(suf => {
-      if (form[`bgImage${suf}`] === id) set(`bgImage${suf}`, null);
+      set(`bgImages${suf}`, (form[`bgImages${suf}`]||[]).filter(x => x !== id));
     });
   };
   const updateBgSetting = (id, key, value) => setBgLib(bgLib.map(b => b.id===id ? {...b, [key]: value} : b));
   const getBgEntry = id => bgLib.find(b => b.id === id) || null;
+  const toggleBgLayer = (suf, id) => {
+    const current = form[`bgImages${suf}`]||[];
+    set(`bgImages${suf}`, current.includes(id) ? current.filter(x=>x!==id) : [...current, id]);
+  };
   const bgFor = suf => {
-    const entry = getBgEntry(form[`bgImage${suf}`]);
-    return entry
-      ? { bgImage: entry.image, bgOpacity: entry.opacity, bgScale: entry.scale, bgX: entry.x, bgY: entry.y }
-      : { bgImage: null };
+    const ids = form[`bgImages${suf}`]||[];
+    return { bgLayers: ids.map(getBgEntry).filter(Boolean) };
   };
 
   // Kader
@@ -877,51 +879,59 @@ export default function App() {
 
           {/* Hintergrundfoto */}
           <Collapsible title={`🖼️ Hintergrundfoto — ${typeSuffix==="Matchday"?"Spieltag-Ankündigung":typeSuffix==="Result"?"Spielbericht":"Spielplan"}`} cardStyle={card}>
-            <ImgUpload label="" value={getBgEntry(form[`bgImage${typeSuffix}`])?.image || null} onChange={v=>{ if(!v){set(`bgImage${typeSuffix}`,null); return;} const id=addBgPhoto(v); set(`bgImage${typeSuffix}`,id); }} h={110}/>
+            <ImgUpload label="" value={null} onChange={v=>{ if(!v) return; const id=addBgPhoto(v); const cur=form[`bgImages${typeSuffix}`]||[]; if(!cur.includes(id)) set(`bgImages${typeSuffix}`,[...cur,id]); }} h={110}/>
 
             {bgLib.length>0 && (
               <div style={{marginTop:12}}>
-                <div style={{fontSize:11,color:"rgba(255,255,255,0.35)",marginBottom:6}}>Deine Fotos — zum Wechseln anklicken</div>
+                <div style={{fontSize:11,color:"rgba(255,255,255,0.35)",marginBottom:6}}>Deine Fotos — anklicken zum Ein-/Ausblenden (mehrere gleichzeitig möglich)</div>
                 <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
-                  {bgLib.map(entry=>(
-                    <div key={entry.id} style={{position:"relative"}}>
-                      <img src={entry.image} alt="" onClick={()=>set(`bgImage${typeSuffix}`,entry.id)}
-                        style={{width:56,height:56,objectFit:"cover",borderRadius:8,cursor:"pointer",border:form[`bgImage${typeSuffix}`]===entry.id?"2.5px solid #6eb4ff":"2.5px solid transparent",opacity:form[`bgImage${typeSuffix}`]===entry.id?1:0.7}}/>
-                      <button onClick={()=>removeBgPhoto(entry.id)} style={{position:"absolute",top:-6,right:-6,width:18,height:18,borderRadius:"50%",background:"rgba(255,60,60,0.9)",border:"none",color:"#fff",fontSize:11,lineHeight:1,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
-                    </div>
-                  ))}
+                  {bgLib.map(entry=>{
+                    const active = (form[`bgImages${typeSuffix}`]||[]).includes(entry.id);
+                    return (
+                      <div key={entry.id} style={{position:"relative"}}>
+                        <img src={entry.image} alt="" onClick={()=>toggleBgLayer(typeSuffix,entry.id)}
+                          style={{width:56,height:56,objectFit:"cover",borderRadius:8,cursor:"pointer",border:active?"2.5px solid #6eb4ff":"2.5px solid transparent",opacity:active?1:0.5}}/>
+                        {active && <div style={{position:"absolute",bottom:-6,left:"50%",transform:"translateX(-50%)",background:"#6eb4ff",color:"#0a1030",fontSize:9,fontWeight:700,borderRadius:8,padding:"1px 6px"}}>AN</div>}
+                        <button onClick={()=>removeBgPhoto(entry.id)} style={{position:"absolute",top:-6,right:-6,width:18,height:18,borderRadius:"50%",background:"rgba(255,60,60,0.9)",border:"none",color:"#fff",fontSize:11,lineHeight:1,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
 
-            {(() => {
-              const bgId = form[`bgImage${typeSuffix}`];
-              const entry = getBgEntry(bgId);
+            {(form[`bgImages${typeSuffix}`]||[]).map(id=>{
+              const entry = getBgEntry(id);
               if (!entry) return null;
               return (
-                <div style={{marginTop:12,display:"flex",flexDirection:"column",gap:10}}>
-                  <div style={{fontSize:11,color:"rgba(255,255,255,0.3)"}}>Einstellungen gelten nur für dieses Foto</div>
-                  {[
-                    {key:"opacity", label:"Helligkeit", min:5,  max:100, unit:"%"},
-                    {key:"scale",   label:"Größe",      min:50, max:400, unit:"%"},
-                    {key:"x",       label:"Position X", min:-50,max:50,  unit:""},
-                    {key:"y",       label:"Position Y", min:-50,max:50,  unit:""},
-                  ].map(({key,label,min,max,unit})=>(
-                    <div key={key} style={{display:"flex",alignItems:"center",gap:10}}>
-                      <span style={{fontSize:12,color:"rgba(255,255,255,0.5)",width:72,flexShrink:0}}>{label}</span>
-                      <input type="range" min={min} max={max} value={entry[key]}
-                        onChange={e=>updateBgSetting(entry.id,key,parseInt(e.target.value))}
-                        style={{flex:1,background:"transparent",border:"none",padding:0,accentColor:"#6eb4ff"}}/>
-                      <span style={{fontSize:12,color:"rgba(255,255,255,0.5)",width:38,textAlign:"right"}}>{entry[key]}{unit}</span>
-                    </div>
-                  ))}
-                  <button onClick={()=>{updateBgSetting(entry.id,"opacity",35);updateBgSetting(entry.id,"scale",100);updateBgSetting(entry.id,"x",0);updateBgSetting(entry.id,"y",0);}}
-                    style={{background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.15)",borderRadius:7,padding:"6px",color:"rgba(255,255,255,0.4)",fontSize:12,cursor:"pointer"}}>
-                    ↺ Zurücksetzen
-                  </button>
+                <div key={id} style={{marginTop:14,paddingTop:12,borderTop:"1px solid rgba(255,255,255,0.08)"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+                    <img src={entry.image} alt="" style={{width:24,height:24,objectFit:"cover",borderRadius:5}}/>
+                    <div style={{fontSize:11,color:"rgba(255,255,255,0.5)"}}>Einstellungen für dieses Foto</div>
+                  </div>
+                  <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                    {[
+                      {key:"opacity", label:"Helligkeit", min:5,  max:100, unit:"%"},
+                      {key:"scale",   label:"Größe",      min:50, max:400, unit:"%"},
+                      {key:"x",       label:"Position X", min:-50,max:50,  unit:""},
+                      {key:"y",       label:"Position Y", min:-50,max:50,  unit:""},
+                    ].map(({key,label,min,max,unit})=>(
+                      <div key={key} style={{display:"flex",alignItems:"center",gap:10}}>
+                        <span style={{fontSize:12,color:"rgba(255,255,255,0.5)",width:72,flexShrink:0}}>{label}</span>
+                        <input type="range" min={min} max={max} value={entry[key]}
+                          onChange={e=>updateBgSetting(entry.id,key,parseInt(e.target.value))}
+                          style={{flex:1,background:"transparent",border:"none",padding:0,accentColor:"#6eb4ff"}}/>
+                        <span style={{fontSize:12,color:"rgba(255,255,255,0.5)",width:38,textAlign:"right"}}>{entry[key]}{unit}</span>
+                      </div>
+                    ))}
+                    <button onClick={()=>{updateBgSetting(entry.id,"opacity",35);updateBgSetting(entry.id,"scale",100);updateBgSetting(entry.id,"x",0);updateBgSetting(entry.id,"y",0);}}
+                      style={{background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.15)",borderRadius:7,padding:"6px",color:"rgba(255,255,255,0.4)",fontSize:12,cursor:"pointer"}}>
+                      ↺ Zurücksetzen
+                    </button>
+                  </div>
                 </div>
               );
-            })()}
+            })}
           </Collapsible>
 
           {/* Spielplan-Editor (nur Spielplan) */}
