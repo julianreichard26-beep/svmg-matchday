@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useLayoutEffect } from "react";
+import { useState, useRef, useEffect, useLayoutEffect, Fragment } from "react";
 import html2canvas from "html2canvas";
 
 function loadLS(key, fallback) {
@@ -44,8 +44,14 @@ const BLANK = {
   extraLines:["Team II – 14:00 Uhr","Team I  – 16:00 Uhr","anschließend Saisonabschlussfeier"],
   team1Name:"Team I",  team1GoalsHome:"", team1GoalsAway:"", team1ScorersHome:"", team1ScorersAway:"", team1SvmgSide:"home",
   team2Name:"Team II", team2GoalsHome:"", team2GoalsAway:"", team2ScorersHome:"", team2ScorersAway:"", team2SvmgSide:"home",
+  team3Name:"Team III", team3GoalsHome:"", team3GoalsAway:"", team3ScorersHome:"", team3ScorersAway:"", team3SvmgSide:"home",
   mood:"motivierend", font:"'Comic Sans MS','Chalkboard SE',cursive",
-  format:"square", hashtags:"#SVMG #Amateurfußball", homeLogo:null, awayLogo:null, bgImage:null,
+  format:"square", hashtags:"#SVMG #Amateurfußball",
+  homeLogoMatchday:null, awayLogoMatchday:null,
+  homeLogoResult:null,   awayLogoResult:null,
+  bgImageMatchday:null, bgOpacityMatchday:35, bgScaleMatchday:100, bgXMatchday:0, bgYMatchday:0,
+  bgImageResult:null,   bgOpacityResult:35,   bgScaleResult:100,   bgXResult:0,   bgYResult:0,
+  bgImageSchedule:null, bgOpacitySchedule:35, bgScaleSchedule:100, bgXSchedule:0, bgYSchedule:0,
   scheduleTitle:"TEAM I", ownLogo:null,
   schedScale:100, schedX:0, schedY:0,
   sections:[{ name:"Testspiele", matches:[{ opponent:"", isHome:true, date:"", time:"" }] }],
@@ -68,6 +74,22 @@ function ImgUpload({ label, value, onChange, h=90 }) {
         <input ref={ref} type="file" accept="image/*" style={{display:"none"}} onChange={pick}/>
       </div>
       {value && <button onClick={()=>onChange(null)} style={{marginTop:5,background:"rgba(255,60,60,0.15)",border:"1px solid rgba(255,60,60,0.35)",borderRadius:6,padding:"3px 10px",color:"#ff8080",fontSize:11,cursor:"pointer"}}>✕ Entfernen</button>}
+    </div>
+  );
+}
+
+function Collapsible({ title, icon, badge, defaultOpen=false, cardStyle, children }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div style={{...cardStyle, padding:0, overflow:"hidden"}}>
+      <div onClick={()=>setOpen(o=>!o)} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:16,cursor:"pointer",userSelect:"none"}}>
+        <div style={{fontSize:13,fontWeight:700,display:"flex",alignItems:"center",gap:8}}>
+          {icon && <span>{icon}</span>}{title}
+          {badge}
+        </div>
+        <span style={{fontSize:14,color:"rgba(255,255,255,0.4)",transform:open?"rotate(180deg)":"none",transition:"transform .15s"}}>▾</span>
+      </div>
+      {open && <div style={{padding:"0 16px 16px"}}>{children}</div>}
     </div>
   );
 }
@@ -273,47 +295,41 @@ function ResultPoster({ d, positions, onMove, editMode }) {
       </div>
       {/* BOTTOM */}
       <div style={{flex:1,position:"relative"}}>
-        <DragText id="t1name" positions={positions} onMove={onMove} style={{border:db,padding:dp,borderRadius:4,textAlign:"center",whiteSpace:"nowrap",top:"16%"}}>
-          <div style={{fontFamily:d.font,fontStyle:"italic",fontWeight:700,fontSize:"clamp(13px,4vw,20px)",color:INK,position:"relative",zIndex:2}}>{d.team1Name||"Team I"}</div>
-        </DragText>
-        <DragText id="t1score" positions={positions} onMove={onMove} style={{border:db,padding:dp,borderRadius:4,width:"88%",top:"30%"}}>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,position:"relative",zIndex:2}}>
-            <div style={{fontSize:"clamp(8px,2.2vw,11px)",color:"rgba(20,40,150,0.7)",lineHeight:1.6,flex:1}}>
-              {d.team1ScorersHome && d.team1ScorersHome.split("\n").map((s,i)=><div key={i}>{s}</div>)}
-            </div>
-            <div style={{fontFamily:TITLE_FONT,fontWeight:900,fontSize:"clamp(26px,8.5vw,46px)",color:PAINT,lineHeight:1,flexShrink:0}}>
-              {d.team1GoalsHome||"–"}:{d.team1GoalsAway||"–"}
-            </div>
-            <div style={{fontSize:"clamp(8px,2.2vw,11px)",color:"rgba(20,40,150,0.7)",lineHeight:1.6,flex:1,textAlign:"right"}}>
-              {d.team1ScorersAway && d.team1ScorersAway.split("\n").map((s,i)=><div key={i}>{s}</div>)}
-            </div>
-          </div>
-        </DragText>
-        <DragText id="divider" positions={positions} onMove={onMove} style={{border:db,padding:dp,borderRadius:4,width:"88%",top:"52%"}}>
-          <div style={{display:"flex",alignItems:"center",gap:8,position:"relative",zIndex:2}}>
-            <div style={{flex:1,height:1,background:"rgba(20,40,150,0.25)"}}/>
-            <div style={{width:7,height:7,background:PAINT,transform:"rotate(45deg)",flexShrink:0,opacity:0.6}}/>
-            <div style={{flex:1,height:1,background:"rgba(20,40,150,0.25)"}}/>
-          </div>
-        </DragText>
-        <DragText id="t2name" positions={positions} onMove={onMove} style={{border:db,padding:dp,borderRadius:4,textAlign:"center",whiteSpace:"nowrap",top:"62%"}}>
-          <div style={{fontFamily:d.font,fontStyle:"italic",fontWeight:700,fontSize:"clamp(13px,4vw,20px)",color:INK,position:"relative",zIndex:2}}>{d.team2Name||"Team II"}</div>
-        </DragText>
-        <DragText id="t2score" positions={positions} onMove={onMove} style={{border:db,padding:dp,borderRadius:4,width:"88%",top:"76%"}}>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,position:"relative",zIndex:2}}>
-            <div style={{fontSize:"clamp(8px,2.2vw,11px)",color:"rgba(20,40,150,0.7)",lineHeight:1.6,flex:1}}>
-              {d.team2ScorersHome && d.team2ScorersHome.split("\n").map((s,i)=><div key={i}>{s}</div>)}
-            </div>
-            <div style={{fontFamily:TITLE_FONT,fontWeight:900,fontSize:"clamp(26px,8.5vw,46px)",color:PAINT,lineHeight:1,flexShrink:0}}>
-              {d.team2GoalsHome||"–"}:{d.team2GoalsAway||"–"}
-            </div>
-            <div style={{fontSize:"clamp(8px,2.2vw,11px)",color:"rgba(20,40,150,0.7)",lineHeight:1.6,flex:1,textAlign:"right"}}>
-              {d.team2ScorersAway && d.team2ScorersAway.split("\n").map((s,i)=><div key={i}>{s}</div>)}
-            </div>
-          </div>
-        </DragText>
+        {[1,2,3].map((num,i)=>{
+          const nameKey=`team${num}Name`, ghKey=`team${num}GoalsHome`, gaKey=`team${num}GoalsAway`, shKey=`team${num}ScorersHome`, saKey=`team${num}ScorersAway`;
+          const nameTop = 8 + i*29, scoreTop = 20 + i*29, dividerTop = 34 + i*29;
+          return (
+            <Fragment key={num}>
+              <DragText id={`t${num}name`} positions={positions} onMove={onMove} style={{border:db,padding:dp,borderRadius:4,textAlign:"center",whiteSpace:"nowrap",top:`${nameTop}%`}}>
+                <div style={{fontFamily:d.font,fontStyle:"italic",fontWeight:700,fontSize:"clamp(13px,4vw,20px)",color:INK,position:"relative",zIndex:2}}>{d[nameKey]||`Team ${["","I","II","III"][num]}`}</div>
+              </DragText>
+              <DragText id={`t${num}score`} positions={positions} onMove={onMove} style={{border:db,padding:dp,borderRadius:4,width:"88%",top:`${scoreTop}%`}}>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,position:"relative",zIndex:2}}>
+                  <div style={{fontSize:"clamp(8px,2.2vw,11px)",color:"rgba(20,40,150,0.7)",lineHeight:1.6,flex:1}}>
+                    {d[shKey] && d[shKey].split("\n").map((s,j)=><div key={j}>{s}</div>)}
+                  </div>
+                  <div style={{fontFamily:TITLE_FONT,fontWeight:900,fontSize:"clamp(24px,7.5vw,40px)",color:PAINT,lineHeight:1,flexShrink:0}}>
+                    {d[ghKey]||"–"}:{d[gaKey]||"–"}
+                  </div>
+                  <div style={{fontSize:"clamp(8px,2.2vw,11px)",color:"rgba(20,40,150,0.7)",lineHeight:1.6,flex:1,textAlign:"right"}}>
+                    {d[saKey] && d[saKey].split("\n").map((s,j)=><div key={j}>{s}</div>)}
+                  </div>
+                </div>
+              </DragText>
+              {num<3 && (
+                <DragText id={`divider${num}`} positions={positions} onMove={onMove} style={{border:db,padding:dp,borderRadius:4,width:"88%",top:`${dividerTop}%`}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8,position:"relative",zIndex:2}}>
+                    <div style={{flex:1,height:1,background:"rgba(20,40,150,0.25)"}}/>
+                    <div style={{width:7,height:7,background:PAINT,transform:"rotate(45deg)",flexShrink:0,opacity:0.6}}/>
+                    <div style={{flex:1,height:1,background:"rgba(20,40,150,0.25)"}}/>
+                  </div>
+                </DragText>
+              )}
+            </Fragment>
+          );
+        })}
         {d.hashtags && (
-          <DragText id="hashtags" positions={positions} onMove={onMove} style={{border:db,padding:dp,borderRadius:4,top:"93%",whiteSpace:"nowrap"}}>
+          <DragText id="hashtags" positions={positions} onMove={onMove} style={{border:db,padding:dp,borderRadius:4,top:"97%",whiteSpace:"nowrap"}}>
             <div style={{fontSize:"clamp(7px,1.8vw,10px)",color:"rgba(20,40,150,0.45)",letterSpacing:.5,position:"relative",zIndex:2}}>{d.hashtags.split(" ").map(t=>t.startsWith("#")?t:`#${t}`).join(" ")}</div>
           </DragText>
         )}
@@ -479,11 +495,9 @@ export default function App() {
   const [slots, setSlots]         = useState(() => loadLS("svmg_slots", { matchday: null, result: null, schedule: null }));
   const [savedMsg, setSavedMsg]   = useState("");
   const [logoLib, setLogoLib]     = useState(() => loadLS("svmg_logos", []));
+  const [bgLib, setBgLib]         = useState(() => loadLS("svmg_bglib", []));
   const [newLogoName, setNewLogoName] = useState("");
   const [pendingLogo, setPendingLogo] = useState(null);
-  const [apiKey, setApiKey] = useState(() => localStorage.getItem("svmg_apikey") || "");
-  const [showApiKey, setShowApiKey] = useState(false);
-  useEffect(() => { localStorage.setItem("svmg_apikey", apiKey); }, [apiKey]);
   const logoUploadRef = useRef(null);
   const posterRef = useRef(null);
 
@@ -491,6 +505,7 @@ export default function App() {
   useEffect(() => { saveLS("svmg_form", form); }, [form]);
   useEffect(() => { saveLS("svmg_slots", slots); }, [slots]);
   useEffect(() => { saveLS("svmg_logos", logoLib); }, [logoLib]);
+  useEffect(() => { saveLS("svmg_bglib", bgLib); }, [bgLib]);
   useEffect(() => { saveLS("svmg_roster", roster); }, [roster]);
   useEffect(() => { saveLS("svmg_positions", allPositions); }, [allPositions]);
 
@@ -534,6 +549,13 @@ export default function App() {
     saveLS("svmg_logos", updated);
   };
 
+  // Hintergrundfoto-Bibliothek
+  const addBgPhoto = (dataUrl) => {
+    if (!dataUrl || bgLib.includes(dataUrl)) return;
+    setBgLib([...bgLib, dataUrl]);
+  };
+  const removeBgPhoto = (dataUrl) => setBgLib(bgLib.filter(b => b !== dataUrl));
+
   // Kader
   const addPlayer = () => {
     const name = newPlayer.trim();
@@ -555,8 +577,9 @@ export default function App() {
   const setWithAutoLogo = (updates) => {
     setForm(f => {
       const next = {...f, ...updates};
-      if (updates.homeTeam !== undefined) { const l = findLogo(updates.homeTeam); if (l) next.homeLogo = l; }
-      if (updates.awayTeam !== undefined) { const l = findLogo(updates.awayTeam); if (l) next.awayLogo = l; }
+      const suffix = f.postType==="result" ? "Result" : "Matchday";
+      if (updates.homeTeam !== undefined) { const l = findLogo(updates.homeTeam); if (l) next[`homeLogo${suffix}`] = l; }
+      if (updates.awayTeam !== undefined) { const l = findLogo(updates.awayTeam); if (l) next[`awayLogo${suffix}`] = l; }
       return next;
     });
   };
@@ -602,22 +625,6 @@ export default function App() {
   const setMatchField = (si,mi,key,val) => setForm(f=>{const s=[...(f.sections||[])];const matches=[...(s[si].matches||[])];matches[mi]={...matches[mi],[key]:val};s[si]={...s[si],matches};return{...f,sections:s};});
   const onMove = (id,pos) => setAllPositions(p => ({...p, [form.postType]: {...(p[form.postType]||{}), [id]: pos}}));
 
-  const generate = async () => {
-    if (!apiKey) { alert("Bitte zuerst oben rechts den API-Key eingeben (⚙️)."); return; }
-    setLoading(true); setCaption("");
-    const dateStr = form.rawDate ? new Date(form.rawDate+"T12:00:00").toLocaleDateString("de-DE") : "";
-    const isResult = form.postType==="result";
-    const prompt = isResult
-      ? `Amateurfußball Spielbericht Post. Nur Text, kein Intro. 3-4 Sätze + Emojis.\n${form.homeTeam} vs ${form.awayTeam} | ${form.team1Name}: ${form.team1GoalsHome}:${form.team1GoalsAway} | ${form.team2Name}: ${form.team2GoalsHome}:${form.team2GoalsAway} | Liga: ${form.league||"Amateurfußball"} | Ton: ${form.mood}`
-      : `Spieltag-Ankündigung Instagram. Nur Text, kein Intro. 2-3 Sätze + Emojis.\n${form.homeTeam} vs ${form.awayTeam} | ${form.matchday?form.matchday+". Spieltag":""} | ${dateStr} | Liga: ${form.league||"Amateurfußball"} | Ton: ${form.mood}`;
-    try {
-      const res = await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:600,messages:[{role:"user",content:prompt}]})});
-      const data = await res.json();
-      setCaption((data.content||[]).map(b=>b.text||"").join("").trim());
-    } catch { setCaption("Verbindungsfehler."); }
-    setLoading(false);
-  };
-
   const downloadPoster = async () => {
     setDownloading(true);
     try {
@@ -655,6 +662,39 @@ export default function App() {
 
   const isResult = form.postType==="result";
   const isSchedule = form.postType==="schedule";
+  const typeSuffix = isSchedule ? "Schedule" : isResult ? "Result" : "Matchday";
+
+  const renderTeamBlock = (num, medal) => {
+    const nameKey=`team${num}Name`, sideKey=`team${num}SvmgSide`, ghKey=`team${num}GoalsHome`, gaKey=`team${num}GoalsAway`, shKey=`team${num}ScorersHome`, saKey=`team${num}ScorersAway`;
+    return (
+      <Collapsible key={num} title={`${medal} Team ${["","I","II","III"][num]}`} cardStyle={card}>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+          <div style={{gridColumn:"1/-1"}}><label>Teamname</label><input value={form[nameKey]} onChange={e=>set(nameKey,e.target.value)} placeholder={`Team ${["","I","II","III"][num]}`}/></div>
+          <div style={{gridColumn:"1/-1",display:"flex",gap:8}}>
+            <button onClick={()=>set(sideKey,"home")} style={{flex:1,background:form[sideKey]==="home"?"rgba(34,51,212,0.5)":"rgba(255,255,255,0.05)",border:`1.5px solid ${form[sideKey]==="home"?"#6eb4ff":"rgba(255,255,255,0.1)"}`,borderRadius:7,padding:"7px",color:form[sideKey]==="home"?"#6eb4ff":"rgba(255,255,255,0.5)",fontSize:12,fontWeight:600,cursor:"pointer"}}>🏠 SVMG spielt Heim</button>
+            <button onClick={()=>set(sideKey,"away")} style={{flex:1,background:form[sideKey]==="away"?"rgba(34,51,212,0.5)":"rgba(255,255,255,0.05)",border:`1.5px solid ${form[sideKey]==="away"?"#6eb4ff":"rgba(255,255,255,0.1)"}`,borderRadius:7,padding:"7px",color:form[sideKey]==="away"?"#6eb4ff":"rgba(255,255,255,0.5)",fontSize:12,fontWeight:600,cursor:"pointer"}}>🚌 SVMG spielt Auswärts</button>
+          </div>
+          <div style={{display:"flex",alignItems:"flex-end",gap:8}}>
+            <div style={{flex:1}}><label>Heim-Tore</label><input value={form[ghKey]} onChange={e=>set(ghKey,e.target.value)} placeholder="2" style={{textAlign:"center",fontSize:22,fontWeight:700}}/></div>
+            <span style={{fontSize:22,color:"rgba(255,255,255,0.3)",paddingBottom:8}}>:</span>
+            <div style={{flex:1}}><label>Gast-Tore</label><input value={form[gaKey]} onChange={e=>set(gaKey,e.target.value)} placeholder="1" style={{textAlign:"center",fontSize:22,fontWeight:700}}/></div>
+          </div>
+          <div style={{gridColumn:"1/-1",display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+            <div>
+              <label>Torschützen Heim</label>
+              {roster.length>0 && form[sideKey]==="home" && <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:6}}>{roster.map(name=><button key={name} onClick={()=>appendScorer(shKey,name)} style={{background:"rgba(110,180,255,0.12)",border:"1px solid rgba(110,180,255,0.3)",borderRadius:6,padding:"3px 8px",color:"#9cc9ff",fontSize:11,cursor:"pointer"}}>+ {name}</button>)}</div>}
+              <textarea value={form[shKey]} onChange={e=>set(shKey,e.target.value)} placeholder={"23' S. Brauner\n87' L. Schwarzenbach"}/>
+            </div>
+            <div>
+              <label>Torschützen Gast</label>
+              {roster.length>0 && form[sideKey]==="away" && <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:6}}>{roster.map(name=><button key={name} onClick={()=>appendScorer(saKey,name)} style={{background:"rgba(110,180,255,0.12)",border:"1px solid rgba(110,180,255,0.3)",borderRadius:6,padding:"3px 8px",color:"#9cc9ff",fontSize:11,cursor:"pointer"}}>+ {name}</button>)}</div>}
+              <textarea value={form[saKey]} onChange={e=>set(saKey,e.target.value)} placeholder={"5' F. Stöckeler\n33' E. Gresser"}/>
+            </div>
+          </div>
+        </div>
+      </Collapsible>
+    );
+  };
   const fullText = [caption, form.hashtags?"\n\n"+form.hashtags.split(" ").map(t=>t.startsWith("#")?t:`#${t}`).join(" "):""].join("");
   const card = {background:"rgba(255,255,255,0.04)",borderRadius:12,padding:16,border:"1px solid rgba(255,255,255,0.07)"};
 
@@ -681,9 +721,6 @@ export default function App() {
           </div>
         </div>
         <div style={{display:"flex",gap:8}}>
-          <button onClick={()=>setShowApiKey(v=>!v)} style={{background:apiKey?"rgba(46,204,113,0.2)":"rgba(255,100,100,0.2)",border:`1.5px solid ${apiKey?"#2ecc71":"#ff6b6b"}`,borderRadius:8,padding:"8px 14px",color:apiKey?"#2ecc71":"#ff6b6b",fontSize:13,fontWeight:600,cursor:"pointer"}}>
-            ⚙️ API-Key {apiKey?"✓":"!"}
-          </button>
           <button onClick={()=>setShowLogos(v=>!v)} style={{background:"rgba(255,255,255,0.1)",border:"1.5px solid rgba(255,255,255,0.2)",borderRadius:8,padding:"8px 14px",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer"}}>
             🛡️ Logos {logoLib.length>0&&<span style={{background:"#2233d4",borderRadius:10,padding:"1px 7px",fontSize:11,marginLeft:4}}>{logoLib.length}</span>}
           </button>
@@ -695,22 +732,6 @@ export default function App() {
           </button>
         </div>
       </div>
-
-      {/* API Key Panel */}
-      {showApiKey && (
-        <div style={{background:"#111a4a",borderBottom:"1px solid rgba(255,255,255,0.1)",padding:"14px 22px"}}>
-          <div style={{maxWidth:1080,margin:"0 auto"}}>
-            <div style={{fontWeight:700,fontSize:13,marginBottom:8,color:"rgba(255,255,255,0.7)"}}>⚙️ Anthropic API-Key (für KI-Texte)</div>
-            <div style={{fontSize:12,color:"rgba(255,255,255,0.4)",marginBottom:10}}>
-              Kostenlosen Key holen auf <a href="https://console.anthropic.com" target="_blank" rel="noreferrer" style={{color:"#6eb4ff"}}>console.anthropic.com</a> → wird nur lokal in deinem Browser gespeichert.
-            </div>
-            <div style={{display:"flex",gap:8}}>
-              <input type="password" value={apiKey} onChange={e=>setApiKey(e.target.value)} placeholder="sk-ant-..." style={{flex:1}}/>
-              <button onClick={()=>setShowApiKey(false)} style={{background:"#2233d4",border:"none",borderRadius:8,padding:"9px 16px",color:"#fff",fontWeight:700,fontSize:13,cursor:"pointer"}}>✓ OK</button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Logo-Bibliothek Panel */}
       {showLogos && (
@@ -815,8 +836,7 @@ export default function App() {
           </div>
 
           {/* Format */}
-          <div style={card}>
-            <label style={{fontSize:13,marginBottom:10}}>Format</label>
+          <Collapsible title="Format" cardStyle={card}>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
               {FORMATS.map(f=>(
                 <button key={f.id} onClick={()=>set("format",f.id)} style={{background:form.format===f.id?"rgba(34,51,212,0.5)":"rgba(255,255,255,0.05)",border:`1.5px solid ${form.format===f.id?"#6eb4ff":"rgba(255,255,255,0.1)"}`,borderRadius:8,padding:"10px 8px",cursor:"pointer",textAlign:"center",display:"flex",flexDirection:"column",gap:3,alignItems:"center"}}>
@@ -826,30 +846,44 @@ export default function App() {
                 </button>
               ))}
             </div>
-          </div>
+          </Collapsible>
 
           {/* Wappen */}
           {!isSchedule && (
-            <div style={card}>
-              <label style={{fontSize:13,marginBottom:12}}>Vereinswappen</label>
+            <Collapsible title="Vereinswappen" cardStyle={card}>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
-                <ImgUpload label="Heim-Wappen" value={form.homeLogo} onChange={v=>set("homeLogo",v)} h={100}/>
-                <ImgUpload label="Gast-Wappen" value={form.awayLogo} onChange={v=>set("awayLogo",v)} h={100}/>
+                <ImgUpload label="Heim-Wappen" value={form[`homeLogo${isResult?"Result":"Matchday"}`]} onChange={v=>set(`homeLogo${isResult?"Result":"Matchday"}`,v)} h={100}/>
+                <ImgUpload label="Gast-Wappen" value={form[`awayLogo${isResult?"Result":"Matchday"}`]} onChange={v=>set(`awayLogo${isResult?"Result":"Matchday"}`,v)} h={100}/>
               </div>
-            </div>
+            </Collapsible>
           )}
 
           {/* Hintergrundfoto */}
-          <div style={card}>
-            <label style={{fontSize:13,marginBottom:12}}>🖼️ Hintergrundfoto (optional)</label>
-            <ImgUpload label="" value={form.bgImage} onChange={v=>set("bgImage",v)} h={110}/>
-            {form.bgImage && (
+          <Collapsible title={`🖼️ Hintergrundfoto — ${typeSuffix==="Matchday"?"Spieltag-Ankündigung":typeSuffix==="Result"?"Spielbericht":"Spielplan"}`} cardStyle={card}>
+            <ImgUpload label="" value={form[`bgImage${typeSuffix}`]} onChange={v=>{set(`bgImage${typeSuffix}`,v); addBgPhoto(v);}} h={110}/>
+
+            {bgLib.length>0 && (
+              <div style={{marginTop:12}}>
+                <div style={{fontSize:11,color:"rgba(255,255,255,0.35)",marginBottom:6}}>Deine Fotos — zum Wechseln anklicken</div>
+                <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+                  {bgLib.map((photo,i)=>(
+                    <div key={i} style={{position:"relative"}}>
+                      <img src={photo} alt="" onClick={()=>set(`bgImage${typeSuffix}`,photo)}
+                        style={{width:56,height:56,objectFit:"cover",borderRadius:8,cursor:"pointer",border:form[`bgImage${typeSuffix}`]===photo?"2.5px solid #6eb4ff":"2.5px solid transparent",opacity:form[`bgImage${typeSuffix}`]===photo?1:0.7}}/>
+                      <button onClick={()=>removeBgPhoto(photo)} style={{position:"absolute",top:-6,right:-6,width:18,height:18,borderRadius:"50%",background:"rgba(255,60,60,0.9)",border:"none",color:"#fff",fontSize:11,lineHeight:1,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {form[`bgImage${typeSuffix}`] && (
               <div style={{marginTop:12,display:"flex",flexDirection:"column",gap:10}}>
                 {[
-                  {key:"bgOpacity", label:"Helligkeit", min:5,  max:100, def:35, unit:"%"},
-                  {key:"bgScale",   label:"Größe",      min:50, max:400, def:100, unit:"%"},
-                  {key:"bgX",       label:"Position X", min:-50,max:50,  def:0,  unit:""},
-                  {key:"bgY",       label:"Position Y", min:-50,max:50,  def:0,  unit:""},
+                  {key:`bgOpacity${typeSuffix}`, label:"Helligkeit", min:5,  max:100, def:35, unit:"%"},
+                  {key:`bgScale${typeSuffix}`,   label:"Größe",      min:50, max:400, def:100, unit:"%"},
+                  {key:`bgX${typeSuffix}`,       label:"Position X", min:-50,max:50,  def:0,  unit:""},
+                  {key:`bgY${typeSuffix}`,       label:"Position Y", min:-50,max:50,  def:0,  unit:""},
                 ].map(({key,label,min,max,def,unit})=>(
                   <div key={key} style={{display:"flex",alignItems:"center",gap:10}}>
                     <span style={{fontSize:12,color:"rgba(255,255,255,0.5)",width:72,flexShrink:0}}>{label}</span>
@@ -859,27 +893,25 @@ export default function App() {
                     <span style={{fontSize:12,color:"rgba(255,255,255,0.5)",width:38,textAlign:"right"}}>{form[key]??def}{unit}</span>
                   </div>
                 ))}
-                <button onClick={()=>{set("bgOpacity",35);set("bgScale",100);set("bgX",0);set("bgY",0);}}
+                <button onClick={()=>{set(`bgOpacity${typeSuffix}`,35);set(`bgScale${typeSuffix}`,100);set(`bgX${typeSuffix}`,0);set(`bgY${typeSuffix}`,0);}}
                   style={{background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.15)",borderRadius:7,padding:"6px",color:"rgba(255,255,255,0.4)",fontSize:12,cursor:"pointer"}}>
                   ↺ Zurücksetzen
                 </button>
               </div>
             )}
-          </div>
+          </Collapsible>
 
           {/* Spielplan-Editor (nur Spielplan) */}
           {isSchedule && (
             <>
-              <div style={card}>
-                <label style={{fontSize:13,marginBottom:12}}>Titel & eigenes Wappen</label>
+              <Collapsible title="Titel & eigenes Wappen" cardStyle={card}>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
                   <div><label>Titel</label><input value={form.scheduleTitle} onChange={e=>set("scheduleTitle",e.target.value)} placeholder="TEAM I"/></div>
                   <ImgUpload label="Eigenes Wappen (SVMG)" value={form.ownLogo} onChange={v=>set("ownLogo",v)} h={90}/>
                 </div>
-              </div>
+              </Collapsible>
 
-              <div style={card}>
-                <label style={{fontSize:13,marginBottom:4}}>↕️ Größe & Position (Spielliste)</label>
+              <Collapsible title="↕️ Größe & Position (Spielliste)" cardStyle={card}>
                 <div style={{fontSize:11,color:"rgba(255,255,255,0.32)",marginBottom:12}}>Die Liste passt sich automatisch an — hiermit kannst du zusätzlich manuell nachjustieren.</div>
                 <div style={{display:"flex",flexDirection:"column",gap:10}}>
                   {[
@@ -900,7 +932,7 @@ export default function App() {
                     ↺ Zurücksetzen
                   </button>
                 </div>
-              </div>
+              </Collapsible>
 
               {(form.sections||[]).map((sec,si)=>(
                 <div key={si} style={card}>
@@ -933,8 +965,7 @@ export default function App() {
 
           {/* Spieldaten */}
           {!isSchedule && (
-            <div style={card}>
-              <label style={{fontSize:13,marginBottom:12}}>Spieldaten</label>
+            <Collapsible title="Spieldaten" cardStyle={card} defaultOpen>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
                 <div><label>Heimteam</label><input value={form.homeTeam} onChange={e=>set("homeTeam",e.target.value)} placeholder="SV Maierhöfen-Grünenbach"/></div>
                 <div><label>Gastteam</label><input value={form.awayTeam} onChange={e=>set("awayTeam",e.target.value)} placeholder="TSV Meckenbeuren"/></div>
@@ -942,73 +973,21 @@ export default function App() {
                 <div><label>Spieltag</label><input value={form.matchday} onChange={e=>set("matchday",e.target.value)} placeholder="34"/></div>
                 <div style={{gridColumn:"1/-1"}}><label>Datum</label><input type="date" value={form.rawDate} onChange={e=>set("rawDate",e.target.value)}/></div>
               </div>
-            </div>
+            </Collapsible>
           )}
 
           {/* Spielbericht — 2 Teams */}
           {isResult && (
             <>
-              <div style={card}>
-                <label style={{fontSize:13,marginBottom:12}}>🥇 Erstes Team</label>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-                  <div style={{gridColumn:"1/-1"}}><label>Teamname</label><input value={form.team1Name} onChange={e=>set("team1Name",e.target.value)} placeholder="Team I"/></div>
-                  <div style={{gridColumn:"1/-1",display:"flex",gap:8}}>
-                    <button onClick={()=>set("team1SvmgSide","home")} style={{flex:1,background:form.team1SvmgSide==="home"?"rgba(34,51,212,0.5)":"rgba(255,255,255,0.05)",border:`1.5px solid ${form.team1SvmgSide==="home"?"#6eb4ff":"rgba(255,255,255,0.1)"}`,borderRadius:7,padding:"7px",color:form.team1SvmgSide==="home"?"#6eb4ff":"rgba(255,255,255,0.5)",fontSize:12,fontWeight:600,cursor:"pointer"}}>🏠 SVMG spielt Heim</button>
-                    <button onClick={()=>set("team1SvmgSide","away")} style={{flex:1,background:form.team1SvmgSide==="away"?"rgba(34,51,212,0.5)":"rgba(255,255,255,0.05)",border:`1.5px solid ${form.team1SvmgSide==="away"?"#6eb4ff":"rgba(255,255,255,0.1)"}`,borderRadius:7,padding:"7px",color:form.team1SvmgSide==="away"?"#6eb4ff":"rgba(255,255,255,0.5)",fontSize:12,fontWeight:600,cursor:"pointer"}}>🚌 SVMG spielt Auswärts</button>
-                  </div>
-                  <div style={{display:"flex",alignItems:"flex-end",gap:8}}>
-                    <div style={{flex:1}}><label>Heim-Tore</label><input value={form.team1GoalsHome} onChange={e=>set("team1GoalsHome",e.target.value)} placeholder="2" style={{textAlign:"center",fontSize:22,fontWeight:700}}/></div>
-                    <span style={{fontSize:22,color:"rgba(255,255,255,0.3)",paddingBottom:8}}>:</span>
-                    <div style={{flex:1}}><label>Gast-Tore</label><input value={form.team1GoalsAway} onChange={e=>set("team1GoalsAway",e.target.value)} placeholder="1" style={{textAlign:"center",fontSize:22,fontWeight:700}}/></div>
-                  </div>
-                  <div style={{gridColumn:"1/-1",display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-                    <div>
-                      <label>Torschützen Heim</label>
-                      {roster.length>0 && form.team1SvmgSide==="home" && <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:6}}>{roster.map(name=><button key={name} onClick={()=>appendScorer("team1ScorersHome",name)} style={{background:"rgba(110,180,255,0.12)",border:"1px solid rgba(110,180,255,0.3)",borderRadius:6,padding:"3px 8px",color:"#9cc9ff",fontSize:11,cursor:"pointer"}}>+ {name}</button>)}</div>}
-                      <textarea value={form.team1ScorersHome} onChange={e=>set("team1ScorersHome",e.target.value)} placeholder={"23' S. Brauner\n87' L. Schwarzenbach"}/>
-                    </div>
-                    <div>
-                      <label>Torschützen Gast</label>
-                      {roster.length>0 && form.team1SvmgSide==="away" && <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:6}}>{roster.map(name=><button key={name} onClick={()=>appendScorer("team1ScorersAway",name)} style={{background:"rgba(110,180,255,0.12)",border:"1px solid rgba(110,180,255,0.3)",borderRadius:6,padding:"3px 8px",color:"#9cc9ff",fontSize:11,cursor:"pointer"}}>+ {name}</button>)}</div>}
-                      <textarea value={form.team1ScorersAway} onChange={e=>set("team1ScorersAway",e.target.value)} placeholder={"5' F. Stöckeler\n33' E. Gresser"}/>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div style={card}>
-                <label style={{fontSize:13,marginBottom:12}}>🥈 Zweites Team</label>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-                  <div style={{gridColumn:"1/-1"}}><label>Teamname</label><input value={form.team2Name} onChange={e=>set("team2Name",e.target.value)} placeholder="Team II"/></div>
-                  <div style={{gridColumn:"1/-1",display:"flex",gap:8}}>
-                    <button onClick={()=>set("team2SvmgSide","home")} style={{flex:1,background:form.team2SvmgSide==="home"?"rgba(34,51,212,0.5)":"rgba(255,255,255,0.05)",border:`1.5px solid ${form.team2SvmgSide==="home"?"#6eb4ff":"rgba(255,255,255,0.1)"}`,borderRadius:7,padding:"7px",color:form.team2SvmgSide==="home"?"#6eb4ff":"rgba(255,255,255,0.5)",fontSize:12,fontWeight:600,cursor:"pointer"}}>🏠 SVMG spielt Heim</button>
-                    <button onClick={()=>set("team2SvmgSide","away")} style={{flex:1,background:form.team2SvmgSide==="away"?"rgba(34,51,212,0.5)":"rgba(255,255,255,0.05)",border:`1.5px solid ${form.team2SvmgSide==="away"?"#6eb4ff":"rgba(255,255,255,0.1)"}`,borderRadius:7,padding:"7px",color:form.team2SvmgSide==="away"?"#6eb4ff":"rgba(255,255,255,0.5)",fontSize:12,fontWeight:600,cursor:"pointer"}}>🚌 SVMG spielt Auswärts</button>
-                  </div>
-                  <div style={{display:"flex",alignItems:"flex-end",gap:8}}>
-                    <div style={{flex:1}}><label>Heim-Tore</label><input value={form.team2GoalsHome} onChange={e=>set("team2GoalsHome",e.target.value)} placeholder="4" style={{textAlign:"center",fontSize:22,fontWeight:700}}/></div>
-                    <span style={{fontSize:22,color:"rgba(255,255,255,0.3)",paddingBottom:8}}>:</span>
-                    <div style={{flex:1}}><label>Gast-Tore</label><input value={form.team2GoalsAway} onChange={e=>set("team2GoalsAway",e.target.value)} placeholder="1" style={{textAlign:"center",fontSize:22,fontWeight:700}}/></div>
-                  </div>
-                  <div style={{gridColumn:"1/-1",display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-                    <div>
-                      <label>Torschützen Heim</label>
-                      {roster.length>0 && form.team2SvmgSide==="home" && <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:6}}>{roster.map(name=><button key={name} onClick={()=>appendScorer("team2ScorersHome",name)} style={{background:"rgba(110,180,255,0.12)",border:"1px solid rgba(110,180,255,0.3)",borderRadius:6,padding:"3px 8px",color:"#9cc9ff",fontSize:11,cursor:"pointer"}}>+ {name}</button>)}</div>}
-                      <textarea value={form.team2ScorersHome} onChange={e=>set("team2ScorersHome",e.target.value)} placeholder={"19' J. Jauß\n33' R. Hold"}/>
-                    </div>
-                    <div>
-                      <label>Torschützen Gast</label>
-                      {roster.length>0 && form.team2SvmgSide==="away" && <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:6}}>{roster.map(name=><button key={name} onClick={()=>appendScorer("team2ScorersAway",name)} style={{background:"rgba(110,180,255,0.12)",border:"1px solid rgba(110,180,255,0.3)",borderRadius:6,padding:"3px 8px",color:"#9cc9ff",fontSize:11,cursor:"pointer"}}>+ {name}</button>)}</div>}
-                      <textarea value={form.team2ScorersAway} onChange={e=>set("team2ScorersAway",e.target.value)} placeholder={"51' M. Herrling"}/>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              {renderTeamBlock(1, "🥇")}
+              {renderTeamBlock(2, "🥈")}
+              {renderTeamBlock(3, "🥉")}
             </>
           )}
 
           {/* Extrazeilen (nur Spieltag) */}
           {!isResult && !isSchedule && (
-            <div style={card}>
-              <label style={{fontSize:13,marginBottom:4}}>Textzeilen auf dem Poster</label>
+            <Collapsible title="Textzeilen auf dem Poster" cardStyle={card}>
               <div style={{fontSize:11,color:"rgba(255,255,255,0.32)",marginBottom:12}}>z. B. „Team II – 14:00 Uhr"</div>
               <div style={{display:"flex",flexDirection:"column",gap:8}}>
                 {form.extraLines.map((line,i)=>(
@@ -1019,12 +998,11 @@ export default function App() {
                 ))}
                 <button onClick={addLine} style={{background:"rgba(255,255,255,0.05)",border:"1px dashed rgba(255,255,255,0.18)",borderRadius:8,padding:"8px",color:"rgba(255,255,255,0.38)",fontSize:12,cursor:"pointer"}}>+ Zeile hinzufügen</button>
               </div>
-            </div>
+            </Collapsible>
           )}
 
           {/* Schriftart */}
-          <div style={card}>
-            <label style={{fontSize:13,marginBottom:12}}>Schriftart</label>
+          <Collapsible title="Schriftart" cardStyle={card}>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
               {FONTS.map(f=>(
                 <button key={f.id} onClick={()=>set("font",f.id)} style={{background:form.font===f.id?"rgba(34,51,212,0.5)":"rgba(255,255,255,0.05)",border:`1.5px solid ${form.font===f.id?"#6eb4ff":"rgba(255,255,255,0.1)"}`,borderRadius:8,padding:"10px 12px",cursor:"pointer",textAlign:"left",display:"flex",flexDirection:"column",gap:2}}>
@@ -1033,26 +1011,12 @@ export default function App() {
                 </button>
               ))}
             </div>
-          </div>
+          </Collapsible>
 
           {!isSchedule && (
-            <>
-              {/* Ton + Hashtags */}
-              <div style={card}>
-                <label style={{fontSize:13,marginBottom:10}}>Ton & Hashtags</label>
-                <div style={{display:"flex",gap:7,flexWrap:"wrap",marginBottom:12}}>
-                  {MOODS.map(m=>(
-                    <button key={m} onClick={()=>set("mood",m)} style={{background:form.mood===m?"rgba(34,51,212,0.5)":"rgba(255,255,255,0.05)",border:`1.5px solid ${form.mood===m?"#6eb4ff":"rgba(255,255,255,0.1)"}`,borderRadius:20,padding:"6px 14px",color:form.mood===m?"#6eb4ff":"rgba(255,255,255,0.5)",fontSize:12,fontWeight:600,cursor:"pointer"}}>{m}</button>
-                  ))}
-                </div>
-                <label>Hashtags</label>
-                <input value={form.hashtags} onChange={e=>set("hashtags",e.target.value)} placeholder="#SVMG #Amateurfußball #Spieltag"/>
-              </div>
-
-              <button onClick={generate} disabled={loading} style={{width:"100%",background:loading?"rgba(34,51,212,0.35)":"linear-gradient(135deg,#2233d4,#1018b0)",border:"none",borderRadius:10,padding:"14px",color:"#fff",fontFamily:"'Comic Sans MS',cursive",fontStyle:"italic",fontWeight:700,fontSize:20,letterSpacing:1,cursor:loading?"not-allowed":"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:10,boxShadow:loading?"none":"0 4px 20px rgba(34,51,212,0.4)"}}>
-                {loading ? <><div style={{width:20,height:20,border:"2px solid rgba(255,255,255,0.25)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin .7s linear infinite"}}/> KI schreibt...</> : "⚡ Post-Text generieren"}
-              </button>
-            </>
+            <Collapsible title="#️⃣ Hashtags" cardStyle={card}>
+              <input value={form.hashtags} onChange={e=>set("hashtags",e.target.value)} placeholder="#SVMG #Amateurfußball #Spieltag"/>
+            </Collapsible>
           )}
         </div>
 
@@ -1070,10 +1034,10 @@ export default function App() {
 
           <div ref={posterRef}>
             {isSchedule
-              ? <SchedulePoster d={form} logoLib={logoLib} positions={positions} onMove={onMove} editMode={editMode}/>
+              ? <SchedulePoster d={{...form, bgImage:form.bgImageSchedule, bgOpacity:form.bgOpacitySchedule, bgScale:form.bgScaleSchedule, bgX:form.bgXSchedule, bgY:form.bgYSchedule}} logoLib={logoLib} positions={positions} onMove={onMove} editMode={editMode}/>
               : isResult
-                ? <ResultPoster d={form} positions={positions} onMove={onMove} editMode={editMode}/>
-                : <MatchdayPoster d={form} caption={caption} positions={positions} onMove={onMove} editMode={editMode}/>
+                ? <ResultPoster d={{...form, bgImage:form.bgImageResult, bgOpacity:form.bgOpacityResult, bgScale:form.bgScaleResult, bgX:form.bgXResult, bgY:form.bgYResult, homeLogo:form.homeLogoResult, awayLogo:form.awayLogoResult}} positions={positions} onMove={onMove} editMode={editMode}/>
+                : <MatchdayPoster d={{...form, bgImage:form.bgImageMatchday, bgOpacity:form.bgOpacityMatchday, bgScale:form.bgScaleMatchday, bgX:form.bgXMatchday, bgY:form.bgYMatchday, homeLogo:form.homeLogoMatchday, awayLogo:form.awayLogoMatchday}} caption={caption} positions={positions} onMove={onMove} editMode={editMode}/>
             }
           </div>
 
