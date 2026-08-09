@@ -368,13 +368,10 @@ function MatchdayPoster({ d, caption, positions, onMove, editMode }) {
           {h:d.homeLogoMatchday3, a:d.awayLogoMatchday3, hn:d.homeTeam3, an:d.awayTeam3, id:"matchup3"},
         ].filter(p=>p.hn||p.an||p.h||p.a).map(p=>(
           <DragText key={p.id} id={p.id} positions={positions} onMove={onMove} style={{border:db,padding:dp,borderRadius:8,whiteSpace:"nowrap"}}>
-            <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
-              <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:14}}>
-                <LogoBox src={p.h} alt="Heim" size={56}/>
-                <div style={{fontFamily:TITLE_FONT,fontWeight:900,fontSize:"clamp(13px,4.5vw,24px)",color:PAINT}}>VS</div>
-                <LogoBox src={p.a} alt="Gast" size={56}/>
-              </div>
-              {(p.hn||p.an) && <div style={{fontFamily:d.font,fontStyle:"italic",fontWeight:700,fontSize:"clamp(10px,3vw,15px)",color:INK}}>{p.hn||"Heim"} – {p.an||"Gast"}</div>}
+            <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:14}}>
+              <LogoBox src={p.h} alt="Heim" size={56}/>
+              <div style={{fontFamily:TITLE_FONT,fontWeight:900,fontSize:"clamp(13px,4.5vw,24px)",color:PAINT}}>VS</div>
+              <LogoBox src={p.a} alt="Gast" size={56}/>
             </div>
           </DragText>
         ))}
