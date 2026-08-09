@@ -549,30 +549,38 @@ export default function App() {
     saveLS("svmg_logos", updated);
   };
 
-  // Hintergrundfoto-Bibliothek — jedes Foto trägt seine eigenen Einstellungen, mehrere gleichzeitig aktiv möglich
+  // Hintergrundfoto-Bibliothek — Fotos sind gemeinsam, aber Helligkeit/Größe/Position pro Post-Typ getrennt
   const addBgPhoto = (dataUrl) => {
     if (!dataUrl) return null;
     const existing = bgLib.find(b => b.image === dataUrl);
     if (existing) return existing.id;
     const id = `bg_${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
-    setBgLib([...bgLib, { id, image: dataUrl, opacity: 35, scale: 100, x: 0, y: 0 }]);
+    setBgLib([...bgLib, { id, image: dataUrl }]);
     return id;
   };
   const removeBgPhoto = (id) => {
     setBgLib(bgLib.filter(b => b.id !== id));
     ["Matchday","Result","Schedule"].forEach(suf => {
-      set(`bgImages${suf}`, (form[`bgImages${suf}`]||[]).filter(x => x !== id));
+      set(`bgImages${suf}`, (form[`bgImages${suf}`]||[]).filter(l => l.photoId !== id));
     });
   };
-  const updateBgSetting = (id, key, value) => setBgLib(bgLib.map(b => b.id===id ? {...b, [key]: value} : b));
   const getBgEntry = id => bgLib.find(b => b.id === id) || null;
-  const toggleBgLayer = (suf, id) => {
+  const toggleBgLayer = (suf, photoId) => {
     const current = form[`bgImages${suf}`]||[];
-    set(`bgImages${suf}`, current.includes(id) ? current.filter(x=>x!==id) : [...current, id]);
+    const exists = current.some(l => l.photoId === photoId);
+    set(`bgImages${suf}`, exists
+      ? current.filter(l => l.photoId !== photoId)
+      : [...current, { photoId, opacity:35, scale:100, x:0, y:0 }]);
+  };
+  const updateBgLayer = (suf, photoId, key, value) => {
+    set(`bgImages${suf}`, (form[`bgImages${suf}`]||[]).map(l => l.photoId===photoId ? {...l, [key]:value} : l));
   };
   const bgFor = suf => {
-    const ids = form[`bgImages${suf}`]||[];
-    return { bgLayers: ids.map(getBgEntry).filter(Boolean) };
+    const layers = form[`bgImages${suf}`]||[];
+    return { bgLayers: layers.map(l => {
+      const entry = getBgEntry(l.photoId);
+      return entry ? { image: entry.image, opacity: l.opacity, scale: l.scale, x: l.x, y: l.y } : null;
+    }).filter(Boolean) };
   };
 
   // Kader
@@ -879,14 +887,14 @@ export default function App() {
 
           {/* Hintergrundfoto */}
           <Collapsible title={`🖼️ Hintergrundfoto — ${typeSuffix==="Matchday"?"Spieltag-Ankündigung":typeSuffix==="Result"?"Spielbericht":"Spielplan"}`} cardStyle={card}>
-            <ImgUpload label="" value={null} onChange={v=>{ if(!v) return; const id=addBgPhoto(v); const cur=form[`bgImages${typeSuffix}`]||[]; if(!cur.includes(id)) set(`bgImages${typeSuffix}`,[...cur,id]); }} h={110}/>
+            <ImgUpload label="" value={null} onChange={v=>{ if(!v) return; const id=addBgPhoto(v); const has=(form[`bgImages${typeSuffix}`]||[]).some(l=>l.photoId===id); if(!has) set(`bgImages${typeSuffix}`,[...(form[`bgImages${typeSuffix}`]||[]),{photoId:id,opacity:35,scale:100,x:0,y:0}]); }} h={110}/>
 
             {bgLib.length>0 && (
               <div style={{marginTop:12}}>
-                <div style={{fontSize:11,color:"rgba(255,255,255,0.35)",marginBottom:6}}>Deine Fotos — anklicken zum Ein-/Ausblenden (mehrere gleichzeitig möglich)</div>
+                <div style={{fontSize:11,color:"rgba(255,255,255,0.35)",marginBottom:6}}>Deine Fotos — anklicken zum Ein-/Ausblenden (mehrere gleichzeitig möglich, Einstellungen pro Post-Typ getrennt)</div>
                 <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
                   {bgLib.map(entry=>{
-                    const active = (form[`bgImages${typeSuffix}`]||[]).includes(entry.id);
+                    const active = (form[`bgImages${typeSuffix}`]||[]).some(l=>l.photoId===entry.id);
                     return (
                       <div key={entry.id} style={{position:"relative"}}>
                         <img src={entry.image} alt="" onClick={()=>toggleBgLayer(typeSuffix,entry.id)}
@@ -900,14 +908,14 @@ export default function App() {
               </div>
             )}
 
-            {(form[`bgImages${typeSuffix}`]||[]).map(id=>{
-              const entry = getBgEntry(id);
+            {(form[`bgImages${typeSuffix}`]||[]).map(layer=>{
+              const entry = getBgEntry(layer.photoId);
               if (!entry) return null;
               return (
-                <div key={id} style={{marginTop:14,paddingTop:12,borderTop:"1px solid rgba(255,255,255,0.08)"}}>
+                <div key={layer.photoId} style={{marginTop:14,paddingTop:12,borderTop:"1px solid rgba(255,255,255,0.08)"}}>
                   <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
                     <img src={entry.image} alt="" style={{width:24,height:24,objectFit:"cover",borderRadius:5}}/>
-                    <div style={{fontSize:11,color:"rgba(255,255,255,0.5)"}}>Einstellungen für dieses Foto</div>
+                    <div style={{fontSize:11,color:"rgba(255,255,255,0.5)"}}>Einstellungen für dieses Foto — nur bei {typeSuffix==="Matchday"?"Spieltag-Ankündigung":typeSuffix==="Result"?"Spielbericht":"Spielplan"}</div>
                   </div>
                   <div style={{display:"flex",flexDirection:"column",gap:10}}>
                     {[
@@ -918,13 +926,13 @@ export default function App() {
                     ].map(({key,label,min,max,unit})=>(
                       <div key={key} style={{display:"flex",alignItems:"center",gap:10}}>
                         <span style={{fontSize:12,color:"rgba(255,255,255,0.5)",width:72,flexShrink:0}}>{label}</span>
-                        <input type="range" min={min} max={max} value={entry[key]}
-                          onChange={e=>updateBgSetting(entry.id,key,parseInt(e.target.value))}
+                        <input type="range" min={min} max={max} value={layer[key]}
+                          onChange={e=>updateBgLayer(typeSuffix,layer.photoId,key,parseInt(e.target.value))}
                           style={{flex:1,background:"transparent",border:"none",padding:0,accentColor:"#6eb4ff"}}/>
-                        <span style={{fontSize:12,color:"rgba(255,255,255,0.5)",width:38,textAlign:"right"}}>{entry[key]}{unit}</span>
+                        <span style={{fontSize:12,color:"rgba(255,255,255,0.5)",width:38,textAlign:"right"}}>{layer[key]}{unit}</span>
                       </div>
                     ))}
-                    <button onClick={()=>{updateBgSetting(entry.id,"opacity",35);updateBgSetting(entry.id,"scale",100);updateBgSetting(entry.id,"x",0);updateBgSetting(entry.id,"y",0);}}
+                    <button onClick={()=>{updateBgLayer(typeSuffix,layer.photoId,"opacity",35);updateBgLayer(typeSuffix,layer.photoId,"scale",100);updateBgLayer(typeSuffix,layer.photoId,"x",0);updateBgLayer(typeSuffix,layer.photoId,"y",0);}}
                       style={{background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.15)",borderRadius:7,padding:"6px",color:"rgba(255,255,255,0.4)",fontSize:12,cursor:"pointer"}}>
                       ↺ Zurücksetzen
                     </button>
