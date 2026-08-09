@@ -183,7 +183,7 @@ function DragText({ id, positions, onMove, children, style }) {
 
 function LogoBox({ src, alt, size=70 }) {
   return (
-    <div style={{width:size,height:size,borderRadius:size*0.14,background:"#fff",border:"2px solid rgba(20,40,150,0.12)",flexShrink:0,boxShadow:"0 2px 8px rgba(20,30,90,0.15)",display:"flex",alignItems:"center",justifyContent:"center",padding:size*0.06,boxSizing:"border-box",overflow:"hidden"}}>
+    <div style={{width:size,height:size,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",boxSizing:"border-box"}}>
       {src
         ? <img src={src} alt={alt} style={{maxWidth:"100%",maxHeight:"100%",width:"auto",height:"auto",display:"block"}}/>
         : <span style={{fontSize:size*0.4}}>🛡️</span>
