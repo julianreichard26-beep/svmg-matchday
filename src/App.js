@@ -191,7 +191,7 @@ function LogoBox({ src, alt, size=70 }) {
     </div>
   );
 }
-const INK = "#15319e";
+const INK = "#1a3fd6";
 const PAINT = "#1a3fd6";
 const TITLE_FONT = "'Arial Black','Helvetica Neue',Arial,sans-serif";
 
