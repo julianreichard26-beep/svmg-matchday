@@ -55,7 +55,7 @@ const BLANK = {
   bgActiveResult:[],   bgSettingsResult:{},
   bgActiveSchedule:[], bgSettingsSchedule:{},
   scheduleTitle:"TEAM I", ownLogo:null,
-  schedScale:100, schedX:0, schedY:0,
+  schedScale:100, schedX:0, schedY:0, schedTimeSize:100,
   sections:[{ name:"Testspiele", matches:[{ opponent:"", isHome:true, date:"", time:"" }] }],
 };
 
@@ -437,6 +437,8 @@ function SchedulePoster({ d, logoLib, positions, onMove, editMode }) {
   }, [scale, contentKey]);
 
   const px = (min,vw,max) => `clamp(${(min*scale).toFixed(1)}px, ${(vw*scale).toFixed(2)}vw, ${(max*scale).toFixed(1)}px)`;
+  const timeMult = (d.schedTimeSize??100)/100;
+  const pxTime = (min,vw,max) => `clamp(${(min*scale*timeMult).toFixed(1)}px, ${(vw*scale*timeMult).toFixed(2)}vw, ${(max*scale*timeMult).toFixed(1)}px)`;
   const logoSize = Math.round(70*scale);
 
   return (
@@ -474,7 +476,7 @@ function SchedulePoster({ d, logoLib, positions, onMove, editMode }) {
                     <div style={{width:2,alignSelf:"stretch",background:"rgba(20,40,150,0.25)",flexShrink:0}}/>
                     <div style={{fontFamily:d.font,fontStyle:"italic",fontWeight:900,color:INK,letterSpacing:1,lineHeight:1.4,flex:1,minWidth:0}}>
                       <div style={{fontSize:px(16,5,22),whiteSpace:"nowrap"}}>{dateStr(m.date)}</div>
-                      <div style={{fontSize:px(10,3,14),color:INK,whiteSpace:"nowrap"}}>{m.time?`${m.time} UHR`:"HH:MM UHR"}</div>
+                      <div style={{fontSize:pxTime(10,3,14),color:INK,whiteSpace:"nowrap"}}>{m.time?`${m.time} UHR`:"HH:MM UHR"}</div>
                     </div>
                   </div>
                 );
@@ -981,9 +983,10 @@ export default function App() {
                 <div style={{fontSize:11,color:"rgba(255,255,255,0.32)",marginBottom:12}}>Die Liste passt sich automatisch an — hiermit kannst du zusätzlich manuell nachjustieren.</div>
                 <div style={{display:"flex",flexDirection:"column",gap:10}}>
                   {[
-                    {key:"schedScale", label:"Größe",      min:50,  max:150, def:100, unit:"%"},
-                    {key:"schedX",     label:"Position X", min:-50, max:50,  def:0,   unit:""},
-                    {key:"schedY",     label:"Position Y", min:-50, max:50,  def:0,   unit:""},
+                    {key:"schedScale",    label:"Größe",         min:50,  max:150, def:100, unit:"%"},
+                    {key:"schedX",        label:"Position X",    min:-50, max:50,  def:0,   unit:""},
+                    {key:"schedY",        label:"Position Y",    min:-50, max:50,  def:0,   unit:""},
+                    {key:"schedTimeSize", label:"Uhrzeit-Größe", min:50,  max:200, def:100, unit:"%"},
                   ].map(({key,label,min,max,def,unit})=>(
                     <div key={key} style={{display:"flex",alignItems:"center",gap:10}}>
                       <span style={{fontSize:12,color:"rgba(255,255,255,0.5)",width:72,flexShrink:0}}>{label}</span>
@@ -993,7 +996,7 @@ export default function App() {
                       <span style={{fontSize:12,color:"rgba(255,255,255,0.5)",width:38,textAlign:"right"}}>{form[key]??def}{unit}</span>
                     </div>
                   ))}
-                  <button onClick={()=>{set("schedScale",100);set("schedX",0);set("schedY",0);}}
+                  <button onClick={()=>{set("schedScale",100);set("schedX",0);set("schedY",0);set("schedTimeSize",100);}}
                     style={{background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.15)",borderRadius:7,padding:"6px",color:"rgba(255,255,255,0.4)",fontSize:12,cursor:"pointer"}}>
                     ↺ Zurücksetzen
                   </button>
