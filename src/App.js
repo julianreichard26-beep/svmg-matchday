@@ -1015,7 +1015,17 @@ export default function App() {
                         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
                           <div style={{gridColumn:"1/-1"}}><label>Gegner</label><input value={m.opponent} onChange={e=>setMatchField(si,mi,"opponent",e.target.value)} placeholder="TSV Meckenbeuren"/></div>
                           <div><label>Datum</label><input type="date" value={m.date} onChange={e=>setMatchField(si,mi,"date",e.target.value)}/></div>
-                          <div><label>Uhrzeit</label><input type="time" value={m.time} onChange={e=>setMatchField(si,mi,"time",e.target.value)}/></div>
+                          <div>
+                            <label>Uhrzeit</label>
+                            <input type="time" value={m.time} onChange={e=>setMatchField(si,mi,"time",e.target.value)}/>
+                            <div style={{display:"flex",alignItems:"center",gap:6,marginTop:6}}>
+                              <span style={{fontSize:10,color:"rgba(255,255,255,0.4)",flexShrink:0}}>Größe</span>
+                              <input type="range" min={50} max={200} value={form.schedTimeSize??100}
+                                onChange={e=>set("schedTimeSize",parseInt(e.target.value))}
+                                style={{flex:1,background:"transparent",border:"none",padding:0,accentColor:"#6eb4ff",height:16}}/>
+                              <span style={{fontSize:10,color:"rgba(255,255,255,0.4)",width:30,textAlign:"right",flexShrink:0}}>{form.schedTimeSize??100}%</span>
+                            </div>
+                          </div>
                           <div style={{gridColumn:"1/-1",display:"flex",gap:8}}>
                             <button onClick={()=>setMatchField(si,mi,"isHome",true)}  style={{flex:1,background:m.isHome?"rgba(34,51,212,0.5)":"rgba(255,255,255,0.05)",border:`1.5px solid ${m.isHome?"#6eb4ff":"rgba(255,255,255,0.1)"}`,borderRadius:7,padding:"7px",color:m.isHome?"#6eb4ff":"rgba(255,255,255,0.5)",fontSize:12,fontWeight:600,cursor:"pointer"}}>🏠 Heim</button>
                             <button onClick={()=>setMatchField(si,mi,"isHome",false)} style={{flex:1,background:!m.isHome?"rgba(34,51,212,0.5)":"rgba(255,255,255,0.05)",border:`1.5px solid ${!m.isHome?"#6eb4ff":"rgba(255,255,255,0.1)"}`,borderRadius:7,padding:"7px",color:!m.isHome?"#6eb4ff":"rgba(255,255,255,0.5)",fontSize:12,fontWeight:600,cursor:"pointer"}}>🚌 Auswärts</button>
