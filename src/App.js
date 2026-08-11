@@ -42,6 +42,7 @@ const BLANK = {
   postType:"matchday", homeTeam:"", awayTeam:"",
   rawDate:"", league:"", matchday:"",
   extraLines:["Team II – 14:00 Uhr","Team I  – 16:00 Uhr","anschließend Saisonabschlussfeier"],
+  lineSizes:[100,100,100],
   team1Name:"Team I",  team1GoalsHome:"", team1GoalsAway:"", team1ScorersHome:"", team1ScorersAway:"", team1SvmgSide:"home",
   team2Name:"Team II", team2GoalsHome:"", team2GoalsAway:"", team2ScorersHome:"", team2ScorersAway:"", team2SvmgSide:"home",
   team3Name:"Team III", team3GoalsHome:"", team3GoalsAway:"", team3ScorersHome:"", team3ScorersAway:"", team3SvmgSide:"home",
@@ -343,7 +344,7 @@ function ResultPoster({ d, positions, onMove, editMode }) {
 function MatchdayPoster({ d, caption, positions, onMove, editMode }) {
   const fmt = FORMATS.find(f=>f.id===d.format)||FORMATS[0];
   const dateStr = d.rawDate ? new Date(d.rawDate+"T12:00:00").toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit",year:"numeric"}) : "";
-  const allLines = (d.extraLines||[]).filter(Boolean);
+  const allLines = (d.extraLines||[]).map((line,i)=>({line,i})).filter(x=>x.line);
   const db = editMode ? "1px dashed rgba(20,30,90,0.5)" : "none";
   const dp = editMode ? "4px 8px" : "0";
   return (
@@ -378,12 +379,13 @@ function MatchdayPoster({ d, caption, positions, onMove, editMode }) {
       </div>
       {/* BOTTOM */}
       <div style={{flex:1,position:"relative"}}>
-        {allLines.map((line,i)=>{
-          const sm = line.length>22 && i===allLines.length-1;
-          const top = allLines.length>1 ? 12 + i*(66/(allLines.length-1)) : 40;
+        {allLines.map(({line,i},idx)=>{
+          const sm = line.length>22 && idx===allLines.length-1;
+          const top = allLines.length>1 ? 12 + idx*(66/(allLines.length-1)) : 40;
+          const mult = ((d.lineSizes||[])[i]??100)/100;
           return (
             <DragText key={i} id={`line${i}`} positions={positions} onMove={onMove} style={{border:db,padding:dp,borderRadius:4,textAlign:"center",width:"85%",top:`${top}%`}}>
-              <div style={{fontFamily:d.font,fontStyle:"italic",fontWeight:sm?600:700,fontSize:sm?"clamp(11px,3.5vw,16px)":"clamp(13px,5vw,26px)",color:sm?"rgba(20,40,150,0.65)":INK,lineHeight:1.3,position:"relative",zIndex:2}}>{line}</div>
+              <div style={{fontFamily:d.font,fontStyle:"italic",fontWeight:sm?600:700,fontSize:sm?`clamp(${11*mult}px,${3.5*mult}vw,${16*mult}px)`:`clamp(${13*mult}px,${5*mult}vw,${26*mult}px)`,color:sm?"rgba(20,40,150,0.65)":INK,lineHeight:1.3,position:"relative",zIndex:2}}>{line}</div>
             </DragText>
           );
         })}
@@ -666,8 +668,9 @@ export default function App() {
     }
   };
   const setLine = (i,v) => setForm(f=>{const l=[...f.extraLines];l[i]=v;return{...f,extraLines:l};});
-  const addLine = () => setForm(f=>({...f,extraLines:[...f.extraLines,""]}));
-  const removeLine = i => setForm(f=>({...f,extraLines:f.extraLines.filter((_,j)=>j!==i)}));
+  const addLine = () => setForm(f=>({...f,extraLines:[...f.extraLines,""],lineSizes:[...(f.lineSizes||[]),100]}));
+  const removeLine = i => setForm(f=>({...f,extraLines:f.extraLines.filter((_,j)=>j!==i),lineSizes:(f.lineSizes||[]).filter((_,j)=>j!==i)}));
+  const setLineSize = (i,v) => setForm(f=>{const s=[...(f.lineSizes||[])];while(s.length<=i)s.push(100);s[i]=v;return{...f,lineSizes:s};});
 
   // Spielplan (Rubriken & Spiele)
   const addSection = () => setForm(f=>({...f,sections:[...(f.sections||[]),{name:"Neue Rubrik",matches:[{opponent:"",isHome:true,date:"",time:""}]}]}));
@@ -1090,9 +1093,18 @@ export default function App() {
               <div style={{fontSize:11,color:"rgba(255,255,255,0.32)",marginBottom:12}}>z. B. „Team II – 14:00 Uhr"</div>
               <div style={{display:"flex",flexDirection:"column",gap:8}}>
                 {form.extraLines.map((line,i)=>(
-                  <div key={i} style={{display:"flex",gap:8,alignItems:"center"}}>
-                    <input value={line} onChange={e=>setLine(i,e.target.value)} placeholder={`Zeile ${i+1}`}/>
-                    <button onClick={()=>removeLine(i)} style={{background:"rgba(255,60,60,0.15)",border:"1px solid rgba(255,60,60,0.3)",borderRadius:6,padding:"8px 10px",color:"#ff8080",fontSize:13,cursor:"pointer",flexShrink:0}}>✕</button>
+                  <div key={i} style={{border:"1px solid rgba(255,255,255,0.06)",borderRadius:8,padding:8}}>
+                    <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                      <input value={line} onChange={e=>setLine(i,e.target.value)} placeholder={`Zeile ${i+1}`}/>
+                      <button onClick={()=>removeLine(i)} style={{background:"rgba(255,60,60,0.15)",border:"1px solid rgba(255,60,60,0.3)",borderRadius:6,padding:"8px 10px",color:"#ff8080",fontSize:13,cursor:"pointer",flexShrink:0}}>✕</button>
+                    </div>
+                    <div style={{display:"flex",alignItems:"center",gap:6,marginTop:8}}>
+                      <span style={{fontSize:10,color:"rgba(255,255,255,0.4)",flexShrink:0}}>Größe</span>
+                      <input type="range" min={50} max={200} value={(form.lineSizes||[])[i]??100}
+                        onChange={e=>setLineSize(i,parseInt(e.target.value))}
+                        style={{flex:1,background:"transparent",border:"none",padding:0,accentColor:"#6eb4ff"}}/>
+                      <span style={{fontSize:10,color:"rgba(255,255,255,0.4)",width:32,textAlign:"right",flexShrink:0}}>{(form.lineSizes||[])[i]??100}%</span>
+                    </div>
                   </div>
                 ))}
                 <button onClick={addLine} style={{background:"rgba(255,255,255,0.05)",border:"1px dashed rgba(255,255,255,0.18)",borderRadius:8,padding:"8px",color:"rgba(255,255,255,0.38)",fontSize:12,cursor:"pointer"}}>+ Zeile hinzufügen</button>
