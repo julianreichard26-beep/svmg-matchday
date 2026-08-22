@@ -625,16 +625,22 @@ export default function App() {
 
   // Foto-Texterkennung (kostenlos, ohne API-Key) — liest Torschützen + Minute aus einem Screenshot
   const [ocrBusyField, setOcrBusyField] = useState(null);
+  const [ocrStatus, setOcrStatus] = useState("");
   const loadTesseract = () => new Promise((resolve, reject) => {
     if (window.Tesseract) return resolve(window.Tesseract);
     const existing = document.querySelector('script[data-tesseract]');
-    if (existing) { existing.addEventListener("load", () => resolve(window.Tesseract)); return; }
+    if (existing) {
+      existing.addEventListener("load", () => resolve(window.Tesseract));
+      existing.addEventListener("error", () => reject(new Error("CDN-Skript konnte nicht geladen werden")));
+      return;
+    }
     const s = document.createElement("script");
     s.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
     s.dataset.tesseract = "1";
     s.onload = () => resolve(window.Tesseract);
-    s.onerror = reject;
+    s.onerror = () => reject(new Error("CDN-Skript konnte nicht geladen werden (evtl. Netzwerk/Werbeblocker)"));
     document.head.appendChild(s);
+    setTimeout(() => { if (!window.Tesseract) reject(new Error("Zeitüberschreitung beim Laden der Bibliothek")); }, 15000);
   });
 
   const parseScorerLines = (text) => {
@@ -693,11 +699,14 @@ export default function App() {
     if (!file) return;
     setOcrBusyField(field);
     setOcrRawText(""); setOcrRawFor(null);
+    setOcrStatus("📦 Lade Bibliothek...");
     try {
       const Tesseract = await loadTesseract();
+      setOcrStatus("🔎 Erkenne Text im Bild... (kann 10-30 Sek. dauern)");
       const { data } = await Tesseract.recognize(file, "deu", { tessedit_pageseg_mode: "6" });
       const rawText = data.text || "";
       setOcrRawText(rawText); setOcrRawFor(field);
+      setOcrStatus(rawText.trim() ? "✅ Text erkannt (siehe unten)" : "⚠️ Erkennung lief durch, aber es wurde kein Text gefunden (Bild evtl. zu unscharf/dunkel)");
       const parsed = parseScorerLines(rawText);
       if (parsed.length > 0) {
         setForm(f => {
@@ -705,11 +714,9 @@ export default function App() {
           const added = parsed.join("\n");
           return { ...f, [field]: current ? `${current}\n${added}` : added };
         });
-      } else {
-        alert("Konnte keine Minute+Name-Kombination automatisch erkennen. Der erkannte Rohtext steht unten — du kannst die Namen/Minuten von dort manuell übernehmen.");
       }
     } catch (e) {
-      alert("Texterkennung fehlgeschlagen. Bitte manuell eintragen.");
+      setOcrStatus(`❌ Fehler: ${e && e.message ? e.message : String(e)}`);
     }
     setOcrBusyField(null);
   };
@@ -718,24 +725,28 @@ export default function App() {
     if (!file) return;
     setOcrBusyField(shKey+saKey);
     setOcrRawText(""); setOcrRawFor(null);
+    setOcrStatus("📦 Lade Bibliothek...");
     try {
       const Tesseract = await loadTesseract();
+      setOcrStatus("🔎 Erkenne Text im Bild... (kann 10-30 Sek. dauern)");
       const { data } = await Tesseract.recognize(file, "deu", { tessedit_pageseg_mode: "6" });
       const rawText = data.text || "";
       setOcrRawText(rawText); setOcrRawFor(shKey+saKey);
       const { homeGoals, awayGoals } = parseMatchReportBothSides(rawText);
-      if (homeGoals.length===0 && awayGoals.length===0) {
-        alert("Konnte kein Muster mit mitlaufendem Spielstand automatisch erkennen. Der erkannte Rohtext steht unten — du kannst Namen/Minuten von dort manuell übernehmen.");
+      if (!rawText.trim()) {
+        setOcrStatus("⚠️ Erkennung lief durch, aber es wurde kein Text gefunden (Bild evtl. zu unscharf/dunkel)");
+      } else if (homeGoals.length===0 && awayGoals.length===0) {
+        setOcrStatus("⚠️ Text erkannt (siehe unten), aber kein Minute+Spielstand-Muster gefunden");
       } else {
         setForm(f => ({
           ...f,
           [shKey]: f[shKey] ? `${f[shKey]}\n${homeGoals.join("\n")}` : homeGoals.join("\n"),
           [saKey]: f[saKey] ? `${f[saKey]}\n${awayGoals.join("\n")}` : awayGoals.join("\n"),
         }));
-        alert(`Erkannt: ${homeGoals.length} Tor(e) links, ${awayGoals.length} Tor(e) rechts. Bitte kurz prüfen, ob die Seiten (Heim/Gast) richtig zugeordnet sind — ggf. Zeilen zwischen den Feldern verschieben.`);
+        setOcrStatus(`✅ Erkannt: ${homeGoals.length} Tor(e) links, ${awayGoals.length} Tor(e) rechts — bitte Seiten prüfen`);
       }
     } catch (e) {
-      alert("Texterkennung fehlgeschlagen. Bitte manuell eintragen.");
+      setOcrStatus(`❌ Fehler: ${e && e.message ? e.message : String(e)}`);
     }
     setOcrBusyField(null);
   };
@@ -857,10 +868,13 @@ export default function App() {
               {ocrBusyField===(shKey+saKey) ? "⏳ Liest Spielbericht..." : "📷 Ein Foto für beide Mannschaften (erkennt Seite automatisch)"}
               <input type="file" accept="image/*" style={{display:"none"}} disabled={!!ocrBusyField} onChange={e=>{runOcrBothSides(shKey,saKey,e.target.files[0]); e.target.value="";}}/>
             </label>
-            {(ocrRawFor===(shKey+saKey) || ocrRawFor===shKey || ocrRawFor===saKey) && ocrRawText && (
+            {(ocrRawFor===(shKey+saKey) || ocrRawFor===shKey || ocrRawFor===saKey || ocrBusyField===(shKey+saKey) || ocrBusyField===shKey || ocrBusyField===saKey) && ocrStatus && (
+              <div style={{marginTop:8,fontSize:11,color:"rgba(255,255,255,0.55)",background:"rgba(255,255,255,0.05)",borderRadius:6,padding:"6px 8px"}}>{ocrStatus}</div>
+            )}
+            {(ocrRawFor===(shKey+saKey) || ocrRawFor===shKey || ocrRawFor===saKey) && (
               <div style={{marginTop:8}}>
-                <div style={{fontSize:10,color:"rgba(255,255,255,0.35)",marginBottom:4}}>Erkannter Rohtext (zum manuellen Kopieren):</div>
-                <textarea readOnly value={ocrRawText} style={{width:"100%",minHeight:90,fontSize:11,fontFamily:"monospace",background:"rgba(0,0,0,0.3)",color:"rgba(255,255,255,0.6)"}}/>
+                <div style={{fontSize:10,color:"rgba(255,255,255,0.35)",marginBottom:4}}>Erkannter Rohtext (zum manuellen Kopieren) — {ocrRawText ? `${ocrRawText.length} Zeichen` : "leer"}:</div>
+                <textarea readOnly value={ocrRawText || "(kein Text erkannt)"} style={{width:"100%",minHeight:90,fontSize:11,fontFamily:"monospace",background:"rgba(0,0,0,0.3)",color:"rgba(255,255,255,0.6)"}}/>
               </div>
             )}
           </div>
