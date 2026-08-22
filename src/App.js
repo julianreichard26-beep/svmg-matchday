@@ -623,6 +623,59 @@ export default function App() {
     });
   };
 
+  // Foto-Texterkennung (kostenlos, ohne API-Key) — liest Torschützen + Minute aus einem Screenshot
+  const [ocrBusyField, setOcrBusyField] = useState(null);
+  const loadTesseract = () => new Promise((resolve, reject) => {
+    if (window.Tesseract) return resolve(window.Tesseract);
+    const existing = document.querySelector('script[data-tesseract]');
+    if (existing) { existing.addEventListener("load", () => resolve(window.Tesseract)); return; }
+    const s = document.createElement("script");
+    s.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
+    s.dataset.tesseract = "1";
+    s.onload = () => resolve(window.Tesseract);
+    s.onerror = reject;
+    document.head.appendChild(s);
+  });
+
+  const parseScorerLines = (text) => {
+    // Sucht Zeilen/Fundstellen im Muster "Minute' Name" oder "Name ... Minute'"
+    const lines = text.split("\n").map(l=>l.trim()).filter(Boolean);
+    const results = [];
+    const minuteRe = /(\d{1,3})\s*[\'’′]/;
+    for (const line of lines) {
+      const m = line.match(minuteRe);
+      if (!m) continue;
+      const minute = m[1];
+      let rest = (line.slice(0, m.index) + " " + line.slice(m.index + m[0].length)).trim();
+      // Zahlen, Doppelpunkte, Ballsymbole u.ä. rausfiltern, nur Namensteil behalten
+      rest = rest.replace(/[0-9:.\-–]+/g, " ").replace(/\s+/g," ").trim();
+      if (rest.length >= 2) results.push(`${minute}' ${rest}`);
+    }
+    return results;
+  };
+
+  const runOcrForField = async (field, file) => {
+    if (!file) return;
+    setOcrBusyField(field);
+    try {
+      const Tesseract = await loadTesseract();
+      const { data } = await Tesseract.recognize(file, "deu");
+      const parsed = parseScorerLines(data.text || "");
+      if (parsed.length > 0) {
+        setForm(f => {
+          const current = f[field] || "";
+          const added = parsed.join("\n");
+          return { ...f, [field]: current ? `${current}\n${added}` : added };
+        });
+      } else {
+        alert("Konnte keine Minute+Name-Kombination erkennen. Bitte manuell eintragen oder ein schärferes Foto versuchen.");
+      }
+    } catch (e) {
+      alert("Texterkennung fehlgeschlagen. Bitte manuell eintragen.");
+    }
+    setOcrBusyField(null);
+  };
+
   // Auto-Zuweisung
   const findLogo = name => findLogoInLib(name, logoLib);
   const setWithAutoLogo = (updates) => {
@@ -737,13 +790,25 @@ export default function App() {
           </div>
           <div style={{gridColumn:"1/-1",display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
             <div>
-              <label>Torschützen Heim</label>
-              {roster.length>0 && form[sideKey]==="home" && <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:6}}>{roster.map(name=><button key={name} onClick={()=>appendScorer(shKey,name)} style={{background:"rgba(110,180,255,0.12)",border:"1px solid rgba(110,180,255,0.3)",borderRadius:6,padding:"3px 8px",color:"#9cc9ff",fontSize:11,cursor:"pointer"}}>+ {name}</button>)}</div>}
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                <label>Torschützen Heim</label>
+                <label style={{background:ocrBusyField===shKey?"rgba(255,255,255,0.05)":"rgba(110,180,255,0.15)",border:"1px solid rgba(110,180,255,0.35)",borderRadius:6,padding:"3px 8px",color:"#9cc9ff",fontSize:10,cursor:ocrBusyField?"not-allowed":"pointer",display:"inline-flex",alignItems:"center",gap:4}}>
+                  {ocrBusyField===shKey ? "⏳ Liest..." : "📷 Aus Foto"}
+                  <input type="file" accept="image/*" style={{display:"none"}} disabled={!!ocrBusyField} onChange={e=>{runOcrForField(shKey,e.target.files[0]); e.target.value="";}}/>
+                </label>
+              </div>
+              {roster.length>0 && form[sideKey]==="home" && <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:6,marginTop:6}}>{roster.map(name=><button key={name} onClick={()=>appendScorer(shKey,name)} style={{background:"rgba(110,180,255,0.12)",border:"1px solid rgba(110,180,255,0.3)",borderRadius:6,padding:"3px 8px",color:"#9cc9ff",fontSize:11,cursor:"pointer"}}>+ {name}</button>)}</div>}
               <textarea value={form[shKey]} onChange={e=>set(shKey,e.target.value)} placeholder={"23' S. Brauner\n87' L. Schwarzenbach"}/>
             </div>
             <div>
-              <label>Torschützen Gast</label>
-              {roster.length>0 && form[sideKey]==="away" && <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:6}}>{roster.map(name=><button key={name} onClick={()=>appendScorer(saKey,name)} style={{background:"rgba(110,180,255,0.12)",border:"1px solid rgba(110,180,255,0.3)",borderRadius:6,padding:"3px 8px",color:"#9cc9ff",fontSize:11,cursor:"pointer"}}>+ {name}</button>)}</div>}
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                <label>Torschützen Gast</label>
+                <label style={{background:ocrBusyField===saKey?"rgba(255,255,255,0.05)":"rgba(110,180,255,0.15)",border:"1px solid rgba(110,180,255,0.35)",borderRadius:6,padding:"3px 8px",color:"#9cc9ff",fontSize:10,cursor:ocrBusyField?"not-allowed":"pointer",display:"inline-flex",alignItems:"center",gap:4}}>
+                  {ocrBusyField===saKey ? "⏳ Liest..." : "📷 Aus Foto"}
+                  <input type="file" accept="image/*" style={{display:"none"}} disabled={!!ocrBusyField} onChange={e=>{runOcrForField(saKey,e.target.files[0]); e.target.value="";}}/>
+                </label>
+              </div>
+              {roster.length>0 && form[sideKey]==="away" && <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:6,marginTop:6}}>{roster.map(name=><button key={name} onClick={()=>appendScorer(saKey,name)} style={{background:"rgba(110,180,255,0.12)",border:"1px solid rgba(110,180,255,0.3)",borderRadius:6,padding:"3px 8px",color:"#9cc9ff",fontSize:11,cursor:"pointer"}}>+ {name}</button>)}</div>}
               <textarea value={form[saKey]} onChange={e=>set(saKey,e.target.value)} placeholder={"5' F. Stöckeler\n33' E. Gresser"}/>
             </div>
           </div>
