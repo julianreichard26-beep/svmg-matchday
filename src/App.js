@@ -719,14 +719,28 @@ export default function App() {
       // notfalls Minute leer lassen statt das ganze Tor zu verlieren.
       events.push({ minute, home, away, name });
     }
-    const homeGoals=[], awayGoals=[];
+    const homeEvents=[], awayEvents=[];
     let prevH=0, prevA=0;
     for (const ev of events) {
-      const line = `${ev.minute ? ev.minute+"'" : "'"} ${ev.name}`;
-      if (ev.home>prevH) homeGoals.push(line);
-      else if (ev.away>prevA) awayGoals.push(line);
+      if (ev.home>prevH) homeEvents.push(ev);
+      else if (ev.away>prevA) awayEvents.push(ev);
       prevH=Math.max(prevH,ev.home); prevA=Math.max(prevA,ev.away);
     }
+    // Mehrfache Tore desselben Spielers zu einer Zeile zusammenfassen (z.B. "15', 24' S. Brauner")
+    const groupByScorer = (evs) => {
+      const order = [];
+      const minutesByName = {};
+      for (const ev of evs) {
+        if (!(ev.name in minutesByName)) { minutesByName[ev.name] = []; order.push(ev.name); }
+        if (ev.minute) minutesByName[ev.name].push(`${ev.minute}'`);
+      }
+      return order.map(name => {
+        const mins = minutesByName[name];
+        return mins.length ? `${mins.join(", ")} ${name}` : `' ${name}`;
+      });
+    };
+    const homeGoals = groupByScorer(homeEvents);
+    const awayGoals = groupByScorer(awayEvents);
     return { homeGoals, awayGoals };
   };
 
