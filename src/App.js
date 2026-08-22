@@ -747,30 +747,6 @@ export default function App() {
   const [ocrRawText, setOcrRawText] = useState("");
   const [ocrRawFor, setOcrRawFor] = useState(null);
 
-  const runOcrForField = async (field, file) => {
-    if (!file) return;
-    setOcrBusyField(field);
-    setOcrRawText(""); setOcrRawFor(null);
-    setOcrStatus("📦 Lade Bibliothek...");
-    try {
-      const Tesseract = await loadTesseract();
-      setOcrStatus("🖼️ Bereite Bild auf (vergrößern, Kontrast)...");
-      const processed = await preprocessImage(file);
-      setOcrStatus("🔎 Erkenne Text im Bild... (kann 10-30 Sek. dauern)");
-      const { data } = await Tesseract.recognize(processed, "deu", { tessedit_pageseg_mode: "4" });
-      const rawText = data.text || "";
-      setOcrRawText(rawText); setOcrRawFor(field);
-      setOcrStatus(rawText.trim() ? "✅ Text erkannt (siehe unten)" : "⚠️ Erkennung lief durch, aber es wurde kein Text gefunden (Bild evtl. zu unscharf/dunkel)");
-      const parsed = parseScorerLines(rawText);
-      if (parsed.length > 0) {
-        setForm(f => ({ ...f, [field]: parsed.join("\n") }));
-      }
-    } catch (e) {
-      setOcrStatus(`❌ Fehler: ${e && e.message ? e.message : String(e)}`);
-    }
-    setOcrBusyField(null);
-  };
-
   const runOcrBothSides = async (shKey, saKey, file) => {
     if (!file) return;
     setOcrBusyField(shKey+saKey);
@@ -932,24 +908,12 @@ export default function App() {
           </div>
           <div style={{gridColumn:"1/-1",display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
             <div>
-              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                <label>Torschützen Heim</label>
-                <label style={{background:ocrBusyField===shKey?"rgba(255,255,255,0.05)":"rgba(110,180,255,0.15)",border:"1px solid rgba(110,180,255,0.35)",borderRadius:6,padding:"3px 8px",color:"#9cc9ff",fontSize:10,cursor:ocrBusyField?"not-allowed":"pointer",display:"inline-flex",alignItems:"center",gap:4}}>
-                  {ocrBusyField===shKey ? "⏳ Liest..." : "📷 Aus Foto"}
-                  <input type="file" accept="image/*" style={{display:"none"}} disabled={!!ocrBusyField} onChange={e=>{runOcrForField(shKey,e.target.files[0]); e.target.value="";}}/>
-                </label>
-              </div>
+              <label>Torschützen Heim</label>
               {roster.length>0 && form[sideKey]==="home" && <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:6,marginTop:6}}>{roster.map(name=><button key={name} onClick={()=>appendScorer(shKey,name)} style={{background:"rgba(110,180,255,0.12)",border:"1px solid rgba(110,180,255,0.3)",borderRadius:6,padding:"3px 8px",color:"#9cc9ff",fontSize:11,cursor:"pointer"}}>+ {name}</button>)}</div>}
               <textarea value={form[shKey]} onChange={e=>set(shKey,e.target.value)} placeholder={"23' S. Brauner\n87' L. Schwarzenbach"}/>
             </div>
             <div>
-              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                <label>Torschützen Gast</label>
-                <label style={{background:ocrBusyField===saKey?"rgba(255,255,255,0.05)":"rgba(110,180,255,0.15)",border:"1px solid rgba(110,180,255,0.35)",borderRadius:6,padding:"3px 8px",color:"#9cc9ff",fontSize:10,cursor:ocrBusyField?"not-allowed":"pointer",display:"inline-flex",alignItems:"center",gap:4}}>
-                  {ocrBusyField===saKey ? "⏳ Liest..." : "📷 Aus Foto"}
-                  <input type="file" accept="image/*" style={{display:"none"}} disabled={!!ocrBusyField} onChange={e=>{runOcrForField(saKey,e.target.files[0]); e.target.value="";}}/>
-                </label>
-              </div>
+              <label>Torschützen Gast</label>
               {roster.length>0 && form[sideKey]==="away" && <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:6,marginTop:6}}>{roster.map(name=><button key={name} onClick={()=>appendScorer(saKey,name)} style={{background:"rgba(110,180,255,0.12)",border:"1px solid rgba(110,180,255,0.3)",borderRadius:6,padding:"3px 8px",color:"#9cc9ff",fontSize:11,cursor:"pointer"}}>+ {name}</button>)}</div>}
               <textarea value={form[saKey]} onChange={e=>set(saKey,e.target.value)} placeholder={"5' F. Stöckeler\n33' E. Gresser"}/>
             </div>
