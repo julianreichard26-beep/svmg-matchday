@@ -641,7 +641,7 @@ export default function App() {
     // Sucht Zeilen/Fundstellen im Muster "Minute' Name" oder "Name ... Minute'"
     const lines = text.split("\n").map(l=>l.trim()).filter(Boolean);
     const results = [];
-    const minuteRe = /(\d{1,3})\s*[\'’′]/;
+    const minuteRe = /(\d{1,3})\s*[\'’′´]/;
     for (const line of lines) {
       const m = line.match(minuteRe);
       if (!m) continue;
@@ -652,6 +652,38 @@ export default function App() {
       if (rest.length >= 2) results.push(`${minute}' ${rest}`);
     }
     return results;
+  };
+
+  // Nutzt den mitlaufenden Spielstand (z.B. "0:1", "0:2", "1:2" ...) um automatisch zu erkennen,
+  // welche Seite getroffen hat — funktioniert mit einem einzigen Foto für beide Mannschaften.
+  const parseMatchReportBothSides = (text) => {
+    const raw = text.replace(/\r/g,"");
+    const minuteRe = /(\d{1,3})\s*[\'’′´]/g;
+    let m;
+    const events = [];
+    while ((m = minuteRe.exec(raw)) !== null) {
+      const minute = parseInt(m[1],10);
+      if (!minute || minute<1 || minute>130) continue;
+      const start = Math.max(0, m.index-60);
+      const context = raw.slice(start, m.index);
+      const scoreMatches = [...context.matchAll(/(\d{1,2})\s*[:.]\s*(\d{1,2})/g)];
+      const scorePair = scoreMatches.length ? scoreMatches[scoreMatches.length-1] : null;
+      if (!scorePair) continue;
+      let nameZone = context.slice(0, scorePair.index);
+      nameZone = (nameZone.split("\n").filter(Boolean).pop() || nameZone);
+      const name = nameZone.replace(/[0-9:.\-–]+/g," ").replace(/\s+/g," ").trim();
+      if (!name || name.length<2) continue;
+      events.push({ minute, home: parseInt(scorePair[1],10), away: parseInt(scorePair[2],10), name });
+    }
+    events.sort((a,b)=>a.minute-b.minute);
+    const homeGoals=[], awayGoals=[];
+    let prevH=0, prevA=0;
+    for (const ev of events) {
+      if (ev.home>prevH) homeGoals.push(`${ev.minute}' ${ev.name}`);
+      else if (ev.away>prevA) awayGoals.push(`${ev.minute}' ${ev.name}`);
+      prevH=Math.max(prevH,ev.home); prevA=Math.max(prevA,ev.away);
+    }
+    return { homeGoals, awayGoals };
   };
 
   const runOcrForField = async (field, file) => {
@@ -669,6 +701,29 @@ export default function App() {
         });
       } else {
         alert("Konnte keine Minute+Name-Kombination erkennen. Bitte manuell eintragen oder ein schärferes Foto versuchen.");
+      }
+    } catch (e) {
+      alert("Texterkennung fehlgeschlagen. Bitte manuell eintragen.");
+    }
+    setOcrBusyField(null);
+  };
+
+  const runOcrBothSides = async (shKey, saKey, file) => {
+    if (!file) return;
+    setOcrBusyField(shKey+saKey);
+    try {
+      const Tesseract = await loadTesseract();
+      const { data } = await Tesseract.recognize(file, "deu");
+      const { homeGoals, awayGoals } = parseMatchReportBothSides(data.text || "");
+      if (homeGoals.length===0 && awayGoals.length===0) {
+        alert("Konnte kein Muster mit mitlaufendem Spielstand erkennen. Bitte pro Seite einzeln versuchen oder manuell eintragen.");
+      } else {
+        setForm(f => ({
+          ...f,
+          [shKey]: f[shKey] ? `${f[shKey]}\n${homeGoals.join("\n")}` : homeGoals.join("\n"),
+          [saKey]: f[saKey] ? `${f[saKey]}\n${awayGoals.join("\n")}` : awayGoals.join("\n"),
+        }));
+        alert(`Erkannt: ${homeGoals.length} Tor(e) links, ${awayGoals.length} Tor(e) rechts. Bitte kurz prüfen, ob die Seiten (Heim/Gast) richtig zugeordnet sind — ggf. Zeilen zwischen den Feldern verschieben.`);
       }
     } catch (e) {
       alert("Texterkennung fehlgeschlagen. Bitte manuell eintragen.");
@@ -787,6 +842,12 @@ export default function App() {
             <div style={{flex:1}}><label>Heim-Tore</label><input value={form[ghKey]} onChange={e=>set(ghKey,e.target.value)} placeholder="2" style={{textAlign:"center",fontSize:22,fontWeight:700}}/></div>
             <span style={{fontSize:22,color:"rgba(255,255,255,0.3)",paddingBottom:8}}>:</span>
             <div style={{flex:1}}><label>Gast-Tore</label><input value={form[gaKey]} onChange={e=>set(gaKey,e.target.value)} placeholder="1" style={{textAlign:"center",fontSize:22,fontWeight:700}}/></div>
+          </div>
+          <div style={{gridColumn:"1/-1"}}>
+            <label style={{background:ocrBusyField===(shKey+saKey)?"rgba(255,255,255,0.05)":"rgba(46,204,113,0.15)",border:"1px solid rgba(46,204,113,0.4)",borderRadius:7,padding:"9px",color:"#7ee8a8",fontSize:12,fontWeight:600,cursor:ocrBusyField?"not-allowed":"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6,width:"100%"}}>
+              {ocrBusyField===(shKey+saKey) ? "⏳ Liest Spielbericht..." : "📷 Ein Foto für beide Mannschaften (erkennt Seite automatisch)"}
+              <input type="file" accept="image/*" style={{display:"none"}} disabled={!!ocrBusyField} onChange={e=>{runOcrBothSides(shKey,saKey,e.target.files[0]); e.target.value="";}}/>
+            </label>
           </div>
           <div style={{gridColumn:"1/-1",display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
             <div>
