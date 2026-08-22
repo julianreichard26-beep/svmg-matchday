@@ -707,22 +707,24 @@ export default function App() {
       const winEnd = scoreMatches[i+1] ? scoreMatches[i+1].index : Math.min(raw.length, sm.index + sm[0].length + 40);
       const after = raw.slice(sm.index + sm[0].length, winEnd);
       const minMatch = after.match(/(\d{1,3})/);
-      if (!minMatch) continue;
-      let minute = parseInt(minMatch[1],10);
+      let minute = minMatch ? parseInt(minMatch[1],10) : null;
       // OCR liest manchmal eine zusätzliche führende Ziffer (z.B. "140" statt "40") —
-      // in dem Fall die letzten zwei Ziffern nehmen, statt das ganze Tor zu verwerfen.
+      // in dem Fall die letzten zwei Ziffern nehmen.
       if (minute > 99) {
         const alt = minute % 100;
-        if (alt >= 1 && alt <= 99) minute = alt;
+        minute = (alt >= 1 && alt <= 99) ? alt : null;
       }
-      if (!minute || minute<1 || minute>130) continue;
+      if (!minute || minute<1 || minute>99) minute = null;
+      // Wichtiger als die Minute ist Name + richtige Seite (Heim/Gast) — deshalb Tor nie verwerfen,
+      // notfalls Minute leer lassen statt das ganze Tor zu verlieren.
       events.push({ minute, home, away, name });
     }
     const homeGoals=[], awayGoals=[];
     let prevH=0, prevA=0;
     for (const ev of events) {
-      if (ev.home>prevH) homeGoals.push(`${ev.minute}' ${ev.name}`);
-      else if (ev.away>prevA) awayGoals.push(`${ev.minute}' ${ev.name}`);
+      const line = `${ev.minute ? ev.minute+"'" : "'"} ${ev.name}`;
+      if (ev.home>prevH) homeGoals.push(line);
+      else if (ev.away>prevA) awayGoals.push(line);
       prevH=Math.max(prevH,ev.home); prevA=Math.max(prevA,ev.away);
     }
     return { homeGoals, awayGoals };
