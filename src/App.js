@@ -658,7 +658,9 @@ export default function App() {
       const d = imgData.data;
       for (let i = 0; i < d.length; i += 4) {
         const gray = 0.299*d[i] + 0.587*d[i+1] + 0.114*d[i+2];
-        const v = gray > 150 ? 255 : gray < 90 ? 0 : Math.round((gray-90)/(150-90)*255);
+        // Nur echtes Weiß bleibt weiß — alles andere (auch helles Grau wie kleine Minuten-Zahlen) wird schwarz,
+        // damit dünne/graue Schrift bei der Texterkennung nicht verloren geht.
+        const v = gray > 205 ? 255 : 0;
         d[i] = d[i+1] = d[i+2] = v;
       }
       ctx.putImageData(imgData, 0, 0);
@@ -689,24 +691,23 @@ export default function App() {
   // welche Seite getroffen hat — funktioniert mit einem einzigen Foto für beide Mannschaften.
   const parseMatchReportBothSides = (text) => {
     const raw = text.replace(/\r/g,"");
-    const minuteRe = /(\d{1,3})\s*[\'’′´]/g;
-    let m;
+    const scoreMatches = [...raw.matchAll(/(\d{1,2})\s*[:.]\s*(\d{1,2})/g)];
     const events = [];
-    while ((m = minuteRe.exec(raw)) !== null) {
-      const minute = parseInt(m[1],10);
-      if (!minute || minute<1 || minute>130) continue;
-      const start = Math.max(0, m.index-60);
-      const context = raw.slice(start, m.index);
-      const scoreMatches = [...context.matchAll(/(\d{1,2})\s*[:.]\s*(\d{1,2})/g)];
-      const scorePair = scoreMatches.length ? scoreMatches[scoreMatches.length-1] : null;
-      if (!scorePair) continue;
-      let nameZone = context.slice(0, scorePair.index);
-      nameZone = (nameZone.split("\n").filter(Boolean).pop() || nameZone);
-      const name = nameZone.replace(/[0-9:.\-–]+/g," ").replace(/\s+/g," ").trim();
+    for (let i=0; i<scoreMatches.length; i++) {
+      const sm = scoreMatches[i];
+      const home = parseInt(sm[1],10), away = parseInt(sm[2],10);
+      if (home>20 || away>20) continue; // unrealistisch hohe "Scores" ausfiltern (z.B. Uhrzeiten)
+      const before = raw.slice(0, sm.index);
+      const name = (before.split("\n").pop() || "").replace(/[0-9:.\-–]+/g," ").replace(/\s+/g," ").trim();
       if (!name || name.length<2) continue;
-      events.push({ minute, home: parseInt(scorePair[1],10), away: parseInt(scorePair[2],10), name });
+      const winEnd = scoreMatches[i+1] ? scoreMatches[i+1].index : Math.min(raw.length, sm.index + sm[0].length + 40);
+      const after = raw.slice(sm.index + sm[0].length, winEnd);
+      const minMatch = after.match(/(\d{1,3})/);
+      if (!minMatch) continue;
+      const minute = parseInt(minMatch[1],10);
+      if (!minute || minute<1 || minute>130) continue;
+      events.push({ minute, home, away, name });
     }
-    events.sort((a,b)=>a.minute-b.minute);
     const homeGoals=[], awayGoals=[];
     let prevH=0, prevA=0;
     for (const ev of events) {
