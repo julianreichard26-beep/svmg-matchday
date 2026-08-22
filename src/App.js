@@ -747,11 +747,7 @@ export default function App() {
       setOcrStatus(rawText.trim() ? "✅ Text erkannt (siehe unten)" : "⚠️ Erkennung lief durch, aber es wurde kein Text gefunden (Bild evtl. zu unscharf/dunkel)");
       const parsed = parseScorerLines(rawText);
       if (parsed.length > 0) {
-        setForm(f => {
-          const current = f[field] || "";
-          const added = parsed.join("\n");
-          return { ...f, [field]: current ? `${current}\n${added}` : added };
-        });
+        setForm(f => ({ ...f, [field]: parsed.join("\n") }));
       }
     } catch (e) {
       setOcrStatus(`❌ Fehler: ${e && e.message ? e.message : String(e)}`);
@@ -780,10 +776,10 @@ export default function App() {
       } else {
         setForm(f => ({
           ...f,
-          [shKey]: f[shKey] ? `${f[shKey]}\n${homeGoals.join("\n")}` : homeGoals.join("\n"),
-          [saKey]: f[saKey] ? `${f[saKey]}\n${awayGoals.join("\n")}` : awayGoals.join("\n"),
+          [shKey]: homeGoals.join("\n"),
+          [saKey]: awayGoals.join("\n"),
         }));
-        setOcrStatus(`✅ Erkannt: ${homeGoals.length} Tor(e) links, ${awayGoals.length} Tor(e) rechts — bitte Seiten prüfen`);
+        setOcrStatus(`✅ Erkannt: ${homeGoals.length} Tor(e) links, ${awayGoals.length} Tor(e) rechts — bitte Seiten prüfen (Feld-Inhalt wurde ersetzt)`);
       }
     } catch (e) {
       setOcrStatus(`❌ Fehler: ${e && e.message ? e.message : String(e)}`);
