@@ -686,13 +686,19 @@ export default function App() {
     return { homeGoals, awayGoals };
   };
 
+  const [ocrRawText, setOcrRawText] = useState("");
+  const [ocrRawFor, setOcrRawFor] = useState(null);
+
   const runOcrForField = async (field, file) => {
     if (!file) return;
     setOcrBusyField(field);
+    setOcrRawText(""); setOcrRawFor(null);
     try {
       const Tesseract = await loadTesseract();
-      const { data } = await Tesseract.recognize(file, "deu");
-      const parsed = parseScorerLines(data.text || "");
+      const { data } = await Tesseract.recognize(file, "deu", { tessedit_pageseg_mode: "6" });
+      const rawText = data.text || "";
+      setOcrRawText(rawText); setOcrRawFor(field);
+      const parsed = parseScorerLines(rawText);
       if (parsed.length > 0) {
         setForm(f => {
           const current = f[field] || "";
@@ -700,7 +706,7 @@ export default function App() {
           return { ...f, [field]: current ? `${current}\n${added}` : added };
         });
       } else {
-        alert("Konnte keine Minute+Name-Kombination erkennen. Bitte manuell eintragen oder ein schärferes Foto versuchen.");
+        alert("Konnte keine Minute+Name-Kombination automatisch erkennen. Der erkannte Rohtext steht unten — du kannst die Namen/Minuten von dort manuell übernehmen.");
       }
     } catch (e) {
       alert("Texterkennung fehlgeschlagen. Bitte manuell eintragen.");
@@ -711,12 +717,15 @@ export default function App() {
   const runOcrBothSides = async (shKey, saKey, file) => {
     if (!file) return;
     setOcrBusyField(shKey+saKey);
+    setOcrRawText(""); setOcrRawFor(null);
     try {
       const Tesseract = await loadTesseract();
-      const { data } = await Tesseract.recognize(file, "deu");
-      const { homeGoals, awayGoals } = parseMatchReportBothSides(data.text || "");
+      const { data } = await Tesseract.recognize(file, "deu", { tessedit_pageseg_mode: "6" });
+      const rawText = data.text || "";
+      setOcrRawText(rawText); setOcrRawFor(shKey+saKey);
+      const { homeGoals, awayGoals } = parseMatchReportBothSides(rawText);
       if (homeGoals.length===0 && awayGoals.length===0) {
-        alert("Konnte kein Muster mit mitlaufendem Spielstand erkennen. Bitte pro Seite einzeln versuchen oder manuell eintragen.");
+        alert("Konnte kein Muster mit mitlaufendem Spielstand automatisch erkennen. Der erkannte Rohtext steht unten — du kannst Namen/Minuten von dort manuell übernehmen.");
       } else {
         setForm(f => ({
           ...f,
@@ -848,6 +857,12 @@ export default function App() {
               {ocrBusyField===(shKey+saKey) ? "⏳ Liest Spielbericht..." : "📷 Ein Foto für beide Mannschaften (erkennt Seite automatisch)"}
               <input type="file" accept="image/*" style={{display:"none"}} disabled={!!ocrBusyField} onChange={e=>{runOcrBothSides(shKey,saKey,e.target.files[0]); e.target.value="";}}/>
             </label>
+            {(ocrRawFor===(shKey+saKey) || ocrRawFor===shKey || ocrRawFor===saKey) && ocrRawText && (
+              <div style={{marginTop:8}}>
+                <div style={{fontSize:10,color:"rgba(255,255,255,0.35)",marginBottom:4}}>Erkannter Rohtext (zum manuellen Kopieren):</div>
+                <textarea readOnly value={ocrRawText} style={{width:"100%",minHeight:90,fontSize:11,fontFamily:"monospace",background:"rgba(0,0,0,0.3)",color:"rgba(255,255,255,0.6)"}}/>
+              </div>
+            )}
           </div>
           <div style={{gridColumn:"1/-1",display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
             <div>
