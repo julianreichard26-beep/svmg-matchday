@@ -643,6 +643,31 @@ export default function App() {
     setTimeout(() => { if (!window.Tesseract) reject(new Error("Zeitüberschreitung beim Laden der Bibliothek")); }, 15000);
   });
 
+  // Bild vor der Texterkennung aufbereiten: vergrößern, Graustufen, Kontrast/Schwellwert
+  // — verbessert die Trefferquote bei kleiner Schrift und bunten Fotos/Bannern spürbar.
+  const preprocessImage = (file) => new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.max(1, Math.min(3, 1600 / img.width));
+      const w = Math.round(img.width * scale), h = Math.round(img.height * scale);
+      const canvas = document.createElement("canvas");
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, w, h);
+      const imgData = ctx.getImageData(0, 0, w, h);
+      const d = imgData.data;
+      for (let i = 0; i < d.length; i += 4) {
+        const gray = 0.299*d[i] + 0.587*d[i+1] + 0.114*d[i+2];
+        const v = gray > 150 ? 255 : gray < 90 ? 0 : Math.round((gray-90)/(150-90)*255);
+        d[i] = d[i+1] = d[i+2] = v;
+      }
+      ctx.putImageData(imgData, 0, 0);
+      canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error("Bildverarbeitung fehlgeschlagen")), "image/png");
+    };
+    img.onerror = () => reject(new Error("Bild konnte nicht geladen werden"));
+    img.src = URL.createObjectURL(file);
+  });
+
   const parseScorerLines = (text) => {
     // Sucht Zeilen/Fundstellen im Muster "Minute' Name" oder "Name ... Minute'"
     const lines = text.split("\n").map(l=>l.trim()).filter(Boolean);
@@ -702,8 +727,10 @@ export default function App() {
     setOcrStatus("📦 Lade Bibliothek...");
     try {
       const Tesseract = await loadTesseract();
+      setOcrStatus("🖼️ Bereite Bild auf (vergrößern, Kontrast)...");
+      const processed = await preprocessImage(file);
       setOcrStatus("🔎 Erkenne Text im Bild... (kann 10-30 Sek. dauern)");
-      const { data } = await Tesseract.recognize(file, "deu", { tessedit_pageseg_mode: "6" });
+      const { data } = await Tesseract.recognize(processed, "deu", { tessedit_pageseg_mode: "4" });
       const rawText = data.text || "";
       setOcrRawText(rawText); setOcrRawFor(field);
       setOcrStatus(rawText.trim() ? "✅ Text erkannt (siehe unten)" : "⚠️ Erkennung lief durch, aber es wurde kein Text gefunden (Bild evtl. zu unscharf/dunkel)");
@@ -728,8 +755,10 @@ export default function App() {
     setOcrStatus("📦 Lade Bibliothek...");
     try {
       const Tesseract = await loadTesseract();
+      setOcrStatus("🖼️ Bereite Bild auf (vergrößern, Kontrast)...");
+      const processed = await preprocessImage(file);
       setOcrStatus("🔎 Erkenne Text im Bild... (kann 10-30 Sek. dauern)");
-      const { data } = await Tesseract.recognize(file, "deu", { tessedit_pageseg_mode: "6" });
+      const { data } = await Tesseract.recognize(processed, "deu", { tessedit_pageseg_mode: "4" });
       const rawText = data.text || "";
       setOcrRawText(rawText); setOcrRawFor(shKey+saKey);
       const { homeGoals, awayGoals } = parseMatchReportBothSides(rawText);
