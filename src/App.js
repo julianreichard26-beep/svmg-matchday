@@ -708,7 +708,13 @@ export default function App() {
       const after = raw.slice(sm.index + sm[0].length, winEnd);
       const minMatch = after.match(/(\d{1,3})/);
       if (!minMatch) continue;
-      const minute = parseInt(minMatch[1],10);
+      let minute = parseInt(minMatch[1],10);
+      // OCR liest manchmal eine zusätzliche führende Ziffer (z.B. "140" statt "40") —
+      // in dem Fall die letzten zwei Ziffern nehmen, statt das ganze Tor zu verwerfen.
+      if (minute > 99) {
+        const alt = minute % 100;
+        if (alt >= 1 && alt <= 99) minute = alt;
+      }
       if (!minute || minute<1 || minute>130) continue;
       events.push({ minute, home, away, name });
     }
