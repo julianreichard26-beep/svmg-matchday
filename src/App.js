@@ -690,7 +690,11 @@ export default function App() {
   // Nutzt den mitlaufenden Spielstand (z.B. "0:1", "0:2", "1:2" ...) um automatisch zu erkennen,
   // welche Seite getroffen hat — funktioniert mit einem einzigen Foto für beide Mannschaften.
   const parseMatchReportBothSides = (text) => {
-    const raw = text.replace(/\r/g,"");
+    let raw = text.replace(/\r/g,"");
+    // Überschrift/Endstand ("SPIELDETAILS 2:5") und Halbzeitstand ("[0:3]") sind keine einzelnen
+    // Tor-Einträge — deshalb erst ab dem Wort "TORE" (Tore-Liste) auswerten, falls vorhanden.
+    const toreIdx = raw.search(/\bTORE\b/i);
+    if (toreIdx >= 0) raw = raw.slice(toreIdx + 4);
     const scoreMatches = [...raw.matchAll(/(\d{1,2})\s*[:.]\s*(\d{1,2})/g)];
     const events = [];
     for (let i=0; i<scoreMatches.length; i++) {
