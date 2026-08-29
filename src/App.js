@@ -267,11 +267,13 @@ function PosterFrame({ aspect, children, editMode }) {
   );
 }
 
-function ResultPoster({ d, positions, onMove, editMode }) {
+function ResultPoster({ d, positions, onMove, editMode, slide=1 }) {
   const fmt = FORMATS.find(f=>f.id===d.format)||FORMATS[0];
   const dateStr = d.rawDate ? new Date(d.rawDate+"T12:00:00").toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit",year:"numeric"}) : "";
   const db = editMode ? "1px dashed rgba(20,30,90,0.5)" : "none";
   const dp = editMode ? "4px 8px" : "0";
+  const num = slide;
+  const nameKey=`team${num}Name`, ghKey=`team${num}GoalsHome`, gaKey=`team${num}GoalsAway`, shKey=`team${num}ScorersHome`, saKey=`team${num}ScorersAway`;
   return (
     <PosterFrame aspect={fmt.ratio} editMode={editMode}>
       {(d.bgLayers||[]).map((layer,li) => (
@@ -296,41 +298,24 @@ function ResultPoster({ d, positions, onMove, editMode }) {
           </div>
         </DragText>
       </div>
-      {/* BOTTOM */}
+      {/* BOTTOM — nur das Team dieser Folie, mit vollem Platz */}
       <div style={{flex:1,position:"relative"}}>
-        {[1,2,3].map((num,i)=>{
-          const nameKey=`team${num}Name`, ghKey=`team${num}GoalsHome`, gaKey=`team${num}GoalsAway`, shKey=`team${num}ScorersHome`, saKey=`team${num}ScorersAway`;
-          const nameTop = 8 + i*29, scoreTop = 20 + i*29, dividerTop = 34 + i*29;
-          return (
-            <Fragment key={num}>
-              <DragText id={`t${num}name`} positions={positions} onMove={onMove} style={{border:db,padding:dp,borderRadius:4,textAlign:"center",whiteSpace:"nowrap",top:`${nameTop}%`}}>
-                <div style={{fontFamily:d.font,fontStyle:"italic",fontWeight:700,fontSize:"clamp(13px,4vw,20px)",color:INK,position:"relative",zIndex:2}}>{d[nameKey]||`Team ${["","I","II","III"][num]}`}</div>
-              </DragText>
-              <DragText id={`t${num}score`} positions={positions} onMove={onMove} style={{border:db,padding:dp,borderRadius:4,width:"88%",top:`${scoreTop}%`}}>
-                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,position:"relative",zIndex:2}}>
-                  <div style={{fontSize:"clamp(8px,2.2vw,11px)",color:"rgba(20,40,150,0.7)",lineHeight:1.6,flex:1}}>
-                    {d[shKey] && d[shKey].split("\n").map((s,j)=><div key={j}>{s}</div>)}
-                  </div>
-                  <div style={{fontFamily:TITLE_FONT,fontWeight:900,fontSize:"clamp(24px,7.5vw,40px)",color:PAINT,lineHeight:1,flexShrink:0}}>
-                    {d[ghKey]||"–"}:{d[gaKey]||"–"}
-                  </div>
-                  <div style={{fontSize:"clamp(8px,2.2vw,11px)",color:"rgba(20,40,150,0.7)",lineHeight:1.6,flex:1,textAlign:"right"}}>
-                    {d[saKey] && d[saKey].split("\n").map((s,j)=><div key={j}>{s}</div>)}
-                  </div>
-                </div>
-              </DragText>
-              {num<3 && (
-                <DragText id={`divider${num}`} positions={positions} onMove={onMove} style={{border:db,padding:dp,borderRadius:4,width:"88%",top:`${dividerTop}%`}}>
-                  <div style={{display:"flex",alignItems:"center",gap:8,position:"relative",zIndex:2}}>
-                    <div style={{flex:1,height:1,background:"rgba(20,40,150,0.25)"}}/>
-                    <div style={{width:7,height:7,background:PAINT,transform:"rotate(45deg)",flexShrink:0,opacity:0.6}}/>
-                    <div style={{flex:1,height:1,background:"rgba(20,40,150,0.25)"}}/>
-                  </div>
-                </DragText>
-              )}
-            </Fragment>
-          );
-        })}
+        <DragText id={`t${num}name`} positions={positions} onMove={onMove} style={{border:db,padding:dp,borderRadius:4,textAlign:"center",whiteSpace:"nowrap",top:"20%"}}>
+          <div style={{fontFamily:d.font,fontStyle:"italic",fontWeight:700,fontSize:"clamp(16px,5vw,26px)",color:INK,position:"relative",zIndex:2}}>{d[nameKey]||`Team ${["","I","II","III"][num]}`}</div>
+        </DragText>
+        <DragText id={`t${num}score`} positions={positions} onMove={onMove} style={{border:db,padding:dp,borderRadius:4,width:"90%",top:"42%"}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,position:"relative",zIndex:2}}>
+            <div style={{fontSize:"clamp(9px,2.6vw,13px)",color:"rgba(20,40,150,0.7)",lineHeight:1.7,flex:1}}>
+              {d[shKey] && d[shKey].split("\n").map((s,j)=><div key={j}>{s}</div>)}
+            </div>
+            <div style={{fontFamily:TITLE_FONT,fontWeight:900,fontSize:"clamp(38px,12vw,64px)",color:PAINT,lineHeight:1,flexShrink:0}}>
+              {d[ghKey]||"–"}:{d[gaKey]||"–"}
+            </div>
+            <div style={{fontSize:"clamp(9px,2.6vw,13px)",color:"rgba(20,40,150,0.7)",lineHeight:1.7,flex:1,textAlign:"right"}}>
+              {d[saKey] && d[saKey].split("\n").map((s,j)=><div key={j}>{s}</div>)}
+            </div>
+          </div>
+        </DragText>
         {d.hashtags && (
           <DragText id="hashtags" positions={positions} onMove={onMove} style={{border:db,padding:dp,borderRadius:4,top:"97%",whiteSpace:"nowrap"}}>
             <div style={{fontSize:"clamp(7px,1.8vw,10px)",color:"rgba(20,40,150,0.45)",letterSpacing:.5,position:"relative",zIndex:2}}>{d.hashtags.split(" ").map(t=>t.startsWith("#")?t:`#${t}`).join(" ")}</div>
@@ -500,6 +485,7 @@ export default function App() {
   const [showTpl, setShowTpl]     = useState(false);
   const [showLogos, setShowLogos] = useState(false);
   const [editMode, setEditMode]   = useState(false);
+  const [resultSlide, setResultSlide] = useState(1);
   const [allPositions, setAllPositions] = useState(() => loadLS("svmg_positions", { matchday: {}, result: {}, schedule: {} }));
   const positions = allPositions[form.postType] || {};
   const [slots, setSlots]         = useState(() => loadLS("svmg_slots", { matchday: null, result: null, schedule: null }));
@@ -748,7 +734,8 @@ export default function App() {
     setDownloading(true);
     try {
       const canvas = await html2canvas(posterRef.current,{scale:3,useCORS:true,allowTaint:true,backgroundColor:null});
-      const filename = `matchday-${form.homeTeam||form.scheduleTitle||"post"}.png`.replace(/\s+/g,"-");
+      const slideTag = isResult ? `-team${["","I","II","III"][resultSlide]}` : "";
+      const filename = `matchday-${form.homeTeam||form.scheduleTitle||"post"}${slideTag}.png`.replace(/\s+/g,"-");
       const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/png"));
       const file = new File([blob], filename, { type: "image/png" });
 
@@ -1197,11 +1184,24 @@ export default function App() {
           </div>
           {editMode && <div style={{background:"rgba(255,200,0,0.08)",border:"1px solid rgba(255,200,0,0.25)",borderRadius:8,padding:"8px 12px",marginBottom:10,fontSize:12,color:"rgba(255,220,100,0.8)"}}>👆 Texte auf dem Poster ziehen</div>}
 
+          {isResult && (
+            <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:12,marginBottom:10}}>
+              <button onClick={()=>setResultSlide(s=>s===1?3:s-1)} style={{background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.18)",borderRadius:"50%",width:32,height:32,color:"#fff",fontSize:16,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>‹</button>
+              <div style={{display:"flex",gap:6}}>
+                {[1,2,3].map(n=>(
+                  <button key={n} onClick={()=>setResultSlide(n)} style={{width:resultSlide===n?22:8,height:8,borderRadius:4,background:resultSlide===n?"#6eb4ff":"rgba(255,255,255,0.25)",border:"none",cursor:"pointer",transition:"width .15s"}} title={`Team ${["","I","II","III"][n]}`}/>
+                ))}
+              </div>
+              <button onClick={()=>setResultSlide(s=>s===3?1:s+1)} style={{background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.18)",borderRadius:"50%",width:32,height:32,color:"#fff",fontSize:16,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>›</button>
+              <span style={{fontSize:12,color:"rgba(255,255,255,0.5)",marginLeft:4}}>Team {["","I","II","III"][resultSlide]}</span>
+            </div>
+          )}
+
           <div ref={posterRef}>
             {isSchedule
               ? <SchedulePoster d={{...form, ...bgFor("Schedule")}} logoLib={logoLib} positions={positions} onMove={onMove} editMode={editMode}/>
               : isResult
-                ? <ResultPoster d={{...form, ...bgFor("Result"), homeLogo:form.homeLogoResult, awayLogo:form.awayLogoResult}} positions={positions} onMove={onMove} editMode={editMode}/>
+                ? <ResultPoster d={{...form, ...bgFor("Result"), homeLogo:form.homeLogoResult, awayLogo:form.awayLogoResult}} positions={positions} onMove={onMove} editMode={editMode} slide={resultSlide}/>
                 : <MatchdayPoster d={{...form, ...bgFor("Matchday"), homeLogo:form.homeLogoMatchday, awayLogo:form.awayLogoMatchday}} caption={caption} positions={positions} onMove={onMove} editMode={editMode}/>
             }
           </div>
