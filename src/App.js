@@ -1185,15 +1185,12 @@ export default function App() {
           {editMode && <div style={{background:"rgba(255,200,0,0.08)",border:"1px solid rgba(255,200,0,0.25)",borderRadius:8,padding:"8px 12px",marginBottom:10,fontSize:12,color:"rgba(255,220,100,0.8)"}}>👆 Texte auf dem Poster ziehen</div>}
 
           {isResult && (
-            <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:12,marginBottom:10}}>
-              <button onClick={()=>setResultSlide(s=>s===1?3:s-1)} style={{background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.18)",borderRadius:"50%",width:32,height:32,color:"#fff",fontSize:16,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>‹</button>
-              <div style={{display:"flex",gap:6}}>
-                {[1,2,3].map(n=>(
-                  <button key={n} onClick={()=>setResultSlide(n)} style={{width:resultSlide===n?22:8,height:8,borderRadius:4,background:resultSlide===n?"#6eb4ff":"rgba(255,255,255,0.25)",border:"none",cursor:"pointer",transition:"width .15s"}} title={`Team ${["","I","II","III"][n]}`}/>
-                ))}
-              </div>
-              <button onClick={()=>setResultSlide(s=>s===3?1:s+1)} style={{background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.18)",borderRadius:"50%",width:32,height:32,color:"#fff",fontSize:16,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>›</button>
-              <span style={{fontSize:12,color:"rgba(255,255,255,0.5)",marginLeft:4}}>Team {["","I","II","III"][resultSlide]}</span>
+            <div style={{display:"flex",gap:6,marginBottom:10}}>
+              {[1,2,3].map(n=>(
+                <button key={n} onClick={()=>setResultSlide(n)} style={{flex:1,background:resultSlide===n?"rgba(34,51,212,0.5)":"rgba(255,255,255,0.06)",border:`1.5px solid ${resultSlide===n?"#6eb4ff":"rgba(255,255,255,0.15)"}`,borderRadius:8,padding:"9px",color:resultSlide===n?"#6eb4ff":"rgba(255,255,255,0.6)",fontSize:13,fontWeight:700,cursor:"pointer"}}>
+                  Team {["","I","II","III"][n]}
+                </button>
+              ))}
             </div>
           )}
 
