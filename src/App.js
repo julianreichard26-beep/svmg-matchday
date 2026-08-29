@@ -623,69 +623,7 @@ export default function App() {
     });
   };
 
-  // Foto-Texterkennung (kostenlos, ohne API-Key) — liest Torschützen + Minute aus einem Screenshot
-  const [ocrBusyField, setOcrBusyField] = useState(null);
   const [ocrStatus, setOcrStatus] = useState("");
-  const loadTesseract = () => new Promise((resolve, reject) => {
-    if (window.Tesseract) return resolve(window.Tesseract);
-    const existing = document.querySelector('script[data-tesseract]');
-    if (existing) {
-      existing.addEventListener("load", () => resolve(window.Tesseract));
-      existing.addEventListener("error", () => reject(new Error("CDN-Skript konnte nicht geladen werden")));
-      return;
-    }
-    const s = document.createElement("script");
-    s.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
-    s.dataset.tesseract = "1";
-    s.onload = () => resolve(window.Tesseract);
-    s.onerror = () => reject(new Error("CDN-Skript konnte nicht geladen werden (evtl. Netzwerk/Werbeblocker)"));
-    document.head.appendChild(s);
-    setTimeout(() => { if (!window.Tesseract) reject(new Error("Zeitüberschreitung beim Laden der Bibliothek")); }, 15000);
-  });
-
-  // Bild vor der Texterkennung aufbereiten: vergrößern, Graustufen, Kontrast/Schwellwert
-  // — verbessert die Trefferquote bei kleiner Schrift und bunten Fotos/Bannern spürbar.
-  const preprocessImage = (file) => new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => {
-      const scale = Math.max(1, Math.min(3, 1600 / img.width));
-      const w = Math.round(img.width * scale), h = Math.round(img.height * scale);
-      const canvas = document.createElement("canvas");
-      canvas.width = w; canvas.height = h;
-      const ctx = canvas.getContext("2d");
-      ctx.drawImage(img, 0, 0, w, h);
-      const imgData = ctx.getImageData(0, 0, w, h);
-      const d = imgData.data;
-      for (let i = 0; i < d.length; i += 4) {
-        const gray = 0.299*d[i] + 0.587*d[i+1] + 0.114*d[i+2];
-        // Nur echtes Weiß bleibt weiß — alles andere (auch helles Grau wie kleine Minuten-Zahlen) wird schwarz,
-        // damit dünne/graue Schrift bei der Texterkennung nicht verloren geht.
-        const v = gray > 205 ? 255 : 0;
-        d[i] = d[i+1] = d[i+2] = v;
-      }
-      ctx.putImageData(imgData, 0, 0);
-      canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error("Bildverarbeitung fehlgeschlagen")), "image/png");
-    };
-    img.onerror = () => reject(new Error("Bild konnte nicht geladen werden"));
-    img.src = URL.createObjectURL(file);
-  });
-
-  const parseScorerLines = (text) => {
-    // Sucht Zeilen/Fundstellen im Muster "Minute' Name" oder "Name ... Minute'"
-    const lines = text.split("\n").map(l=>l.trim()).filter(Boolean);
-    const results = [];
-    const minuteRe = /(\d{1,3})\s*[\'’′´]/;
-    for (const line of lines) {
-      const m = line.match(minuteRe);
-      if (!m) continue;
-      const minute = m[1];
-      let rest = (line.slice(0, m.index) + " " + line.slice(m.index + m[0].length)).trim();
-      // Zahlen, Doppelpunkte, Ballsymbole u.ä. rausfiltern, nur Namensteil behalten
-      rest = rest.replace(/[0-9:.\-–]+/g, " ").replace(/\s+/g," ").trim();
-      if (rest.length >= 2) results.push(`${minute}' ${rest}`);
-    }
-    return results;
-  };
 
   // Nutzt den mitlaufenden Spielstand (z.B. "0:1", "0:2", "1:2" ...) um automatisch zu erkennen,
   // welche Seite getroffen hat — funktioniert mit einem einzigen Foto für beide Mannschaften.
@@ -747,36 +685,25 @@ export default function App() {
   const [ocrRawText, setOcrRawText] = useState("");
   const [ocrRawFor, setOcrRawFor] = useState(null);
 
-  const runOcrBothSides = async (shKey, saKey, file) => {
-    if (!file) return;
-    setOcrBusyField(shKey+saKey);
-    setOcrRawText(""); setOcrRawFor(null);
-    setOcrStatus("📦 Lade Bibliothek...");
-    try {
-      const Tesseract = await loadTesseract();
-      setOcrStatus("🖼️ Bereite Bild auf (vergrößern, Kontrast)...");
-      const processed = await preprocessImage(file);
-      setOcrStatus("🔎 Erkenne Text im Bild... (kann 10-30 Sek. dauern)");
-      const { data } = await Tesseract.recognize(processed, "deu", { tessedit_pageseg_mode: "4" });
-      const rawText = data.text || "";
-      setOcrRawText(rawText); setOcrRawFor(shKey+saKey);
-      const { homeGoals, awayGoals } = parseMatchReportBothSides(rawText);
-      if (!rawText.trim()) {
-        setOcrStatus("⚠️ Erkennung lief durch, aber es wurde kein Text gefunden (Bild evtl. zu unscharf/dunkel)");
-      } else if (homeGoals.length===0 && awayGoals.length===0) {
-        setOcrStatus("⚠️ Text erkannt (siehe unten), aber kein Minute+Spielstand-Muster gefunden");
-      } else {
-        setForm(f => ({
-          ...f,
-          [shKey]: homeGoals.join("\n"),
-          [saKey]: awayGoals.join("\n"),
-        }));
-        setOcrStatus(`✅ Erkannt: ${homeGoals.length} Tor(e) links, ${awayGoals.length} Tor(e) rechts — bitte Seiten prüfen (Feld-Inhalt wurde ersetzt)`);
-      }
-    } catch (e) {
-      setOcrStatus(`❌ Fehler: ${e && e.message ? e.message : String(e)}`);
+  // Text direkt einfügen (z.B. von FuPa kopiert) — keine Bilderkennung nötig, deutlich zuverlässiger
+  const [pasteText, setPasteText] = useState("");
+  const [pasteFor, setPasteFor] = useState(null);
+  const applyPastedText = (shKey, saKey) => {
+    if (!pasteText.trim()) return;
+    const { homeGoals, awayGoals } = parseMatchReportBothSides(pasteText);
+    if (homeGoals.length===0 && awayGoals.length===0) {
+      setOcrStatus("⚠️ Im eingefügten Text kein Minute+Spielstand-Muster gefunden.");
+      setOcrRawFor(shKey+saKey); setOcrRawText(pasteText);
+      return;
     }
-    setOcrBusyField(null);
+    setForm(f => ({
+      ...f,
+      [shKey]: homeGoals.join("\n"),
+      [saKey]: awayGoals.join("\n"),
+    }));
+    setOcrStatus(`✅ Erkannt: ${homeGoals.length} Tor(e) links, ${awayGoals.length} Tor(e) rechts — bitte Seiten prüfen (Feld-Inhalt wurde ersetzt)`);
+    setOcrRawFor(shKey+saKey); setOcrRawText(pasteText);
+    setPasteText(""); setPasteFor(null);
   };
 
   // Auto-Zuweisung
@@ -892,16 +819,20 @@ export default function App() {
             <div style={{flex:1}}><label>Gast-Tore</label><input value={form[gaKey]} onChange={e=>set(gaKey,e.target.value)} placeholder="1" style={{textAlign:"center",fontSize:22,fontWeight:700}}/></div>
           </div>
           <div style={{gridColumn:"1/-1"}}>
-            <label style={{background:ocrBusyField===(shKey+saKey)?"rgba(255,255,255,0.05)":"rgba(46,204,113,0.15)",border:"1px solid rgba(46,204,113,0.4)",borderRadius:7,padding:"9px",color:"#7ee8a8",fontSize:12,fontWeight:600,cursor:ocrBusyField?"not-allowed":"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6,width:"100%"}}>
-              {ocrBusyField===(shKey+saKey) ? "⏳ Liest Spielbericht..." : "📷 Ein Foto für beide Mannschaften (erkennt Seite automatisch)"}
-              <input type="file" accept="image/*" style={{display:"none"}} disabled={!!ocrBusyField} onChange={e=>{runOcrBothSides(shKey,saKey,e.target.files[0]); e.target.value="";}}/>
-            </label>
-            {(ocrRawFor===(shKey+saKey) || ocrRawFor===shKey || ocrRawFor===saKey || ocrBusyField===(shKey+saKey) || ocrBusyField===shKey || ocrBusyField===saKey) && ocrStatus && (
+            <div style={{marginTop:8,background:"rgba(46,204,113,0.08)",border:"1px solid rgba(46,204,113,0.3)",borderRadius:7,padding:9}}>
+              <div style={{fontSize:12,fontWeight:600,color:"#7ee8a8",marginBottom:6}}>📋 Text einfügen (z. B. von FuPa kopiert) — zuverlässiger als Foto</div>
+              <textarea value={pasteFor===(shKey+saKey) ? pasteText : ""} onFocus={()=>setPasteFor(shKey+saKey)} onChange={e=>{setPasteFor(shKey+saKey); setPasteText(e.target.value);}} placeholder={"Text vom Spielbericht hier einfügen (lange auf die Seite tippen → Alles auswählen → Kopieren)"} style={{minHeight:70}}/>
+              <button onClick={()=>applyPastedText(shKey,saKey)} disabled={!pasteText.trim() || pasteFor!==(shKey+saKey)} style={{marginTop:6,width:"100%",background:(pasteText.trim() && pasteFor===(shKey+saKey))?"#2ecc71":"rgba(255,255,255,0.08)",border:"none",borderRadius:6,padding:"8px",color:(pasteText.trim() && pasteFor===(shKey+saKey))?"#0a1f14":"rgba(255,255,255,0.3)",fontSize:12,fontWeight:700,cursor:(pasteText.trim() && pasteFor===(shKey+saKey))?"pointer":"not-allowed"}}>
+                Text auswerten
+              </button>
+            </div>
+
+            {(ocrRawFor===(shKey+saKey) || ocrRawFor===shKey || ocrRawFor===saKey) && ocrStatus && (
               <div style={{marginTop:8,fontSize:11,color:"rgba(255,255,255,0.55)",background:"rgba(255,255,255,0.05)",borderRadius:6,padding:"6px 8px"}}>{ocrStatus}</div>
             )}
             {(ocrRawFor===(shKey+saKey) || ocrRawFor===shKey || ocrRawFor===saKey) && (
               <div style={{marginTop:8}}>
-                <div style={{fontSize:10,color:"rgba(255,255,255,0.35)",marginBottom:4}}>Erkannter Rohtext (zum manuellen Kopieren) — {ocrRawText ? `${ocrRawText.length} Zeichen` : "leer"}:</div>
+                <div style={{fontSize:10,color:"rgba(255,255,255,0.35)",marginBottom:4}}>Erkannter/eingefügter Text (zum manuellen Kopieren) — {ocrRawText ? `${ocrRawText.length} Zeichen` : "leer"}:</div>
                 <textarea readOnly value={ocrRawText || "(kein Text erkannt)"} style={{width:"100%",minHeight:90,fontSize:11,fontFamily:"monospace",background:"rgba(0,0,0,0.3)",color:"rgba(255,255,255,0.6)"}}/>
               </div>
             )}
