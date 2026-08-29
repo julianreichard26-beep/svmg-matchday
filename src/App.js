@@ -1187,7 +1187,7 @@ export default function App() {
           {isResult && (
             <div style={{display:"flex",gap:6,marginBottom:10}}>
               {[1,2,3].map(n=>(
-                <button key={n} onClick={()=>setResultSlide(n)} style={{flex:1,background:resultSlide===n?"rgba(34,51,212,0.5)":"rgba(255,255,255,0.06)",border:`1.5px solid ${resultSlide===n?"#6eb4ff":"rgba(255,255,255,0.15)"}`,borderRadius:8,padding:"9px",color:resultSlide===n?"#6eb4ff":"rgba(255,255,255,0.6)",fontSize:13,fontWeight:700,cursor:"pointer"}}>
+                <button key={n} onClick={()=>setResultSlide(n)} style={{flex:1,background:resultSlide===n?"#2233d4":"#1a1f4d",border:`1.5px solid ${resultSlide===n?"#6eb4ff":"rgba(255,255,255,0.2)"}`,borderRadius:8,padding:"9px",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>
                   Team {["","I","II","III"][n]}
                 </button>
               ))}
