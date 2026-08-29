@@ -499,9 +499,6 @@ export default function App() {
   const [downloading, setDownloading] = useState(false);
   const [showTpl, setShowTpl]     = useState(false);
   const [showLogos, setShowLogos] = useState(false);
-  const [showRoster, setShowRoster] = useState(false);
-  const [roster, setRoster]       = useState(() => loadLS("svmg_roster", []));
-  const [newPlayer, setNewPlayer] = useState("");
   const [editMode, setEditMode]   = useState(false);
   const [allPositions, setAllPositions] = useState(() => loadLS("svmg_positions", { matchday: {}, result: {}, schedule: {} }));
   const positions = allPositions[form.postType] || {};
@@ -519,7 +516,6 @@ export default function App() {
   useEffect(() => { saveLS("svmg_slots", slots); }, [slots]);
   useEffect(() => { saveLS("svmg_logos", logoLib); }, [logoLib]);
   useEffect(() => { saveLS("svmg_bglib", bgLib); }, [bgLib]);
-  useEffect(() => { saveLS("svmg_roster", roster); }, [roster]);
   useEffect(() => { saveLS("svmg_positions", allPositions); }, [allPositions]);
 
   // Logo-Bibliothek
@@ -607,22 +603,6 @@ export default function App() {
     }).filter(Boolean) };
   };
 
-  // Kader
-  const addPlayer = () => {
-    const name = newPlayer.trim();
-    if (!name || roster.includes(name)) return;
-    setRoster([...roster, name].sort((a,b)=>a.localeCompare(b,"de")));
-    setNewPlayer("");
-  };
-  const removePlayer = name => setRoster(roster.filter(p => p !== name));
-  const appendScorer = (field, name) => {
-    setForm(f => {
-      const current = f[field] || "";
-      const line = `' ${name}`;
-      return { ...f, [field]: current ? `${current}\n${line}` : line };
-    });
-  };
-
   const [ocrStatus, setOcrStatus] = useState("");
 
   // Nutzt den mitlaufenden Spielstand (z.B. "0:1", "0:2", "1:2" ...) um automatisch zu erkennen,
@@ -640,7 +620,7 @@ export default function App() {
       const home = parseInt(sm[1],10), away = parseInt(sm[2],10);
       if (home>20 || away>20) continue; // unrealistisch hohe "Scores" ausfiltern (z.B. Uhrzeiten)
       const before = raw.slice(0, sm.index);
-      const name = (before.split("\n").pop() || "").replace(/[0-9:.\-–]+/g," ").replace(/\s+/g," ").trim();
+      const name = (before.trimEnd().split("\n").pop() || "").replace(/[0-9:.\-–]+/g," ").replace(/\s+/g," ").trim();
       if (!name || name.length<2) continue;
       const winEnd = scoreMatches[i+1] ? scoreMatches[i+1].index : Math.min(raw.length, sm.index + sm[0].length + 40);
       const after = raw.slice(sm.index + sm[0].length, winEnd);
@@ -840,12 +820,10 @@ export default function App() {
           <div style={{gridColumn:"1/-1",display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
             <div>
               <label>Torschützen Heim</label>
-              {roster.length>0 && form[sideKey]==="home" && <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:6,marginTop:6}}>{roster.map(name=><button key={name} onClick={()=>appendScorer(shKey,name)} style={{background:"rgba(110,180,255,0.12)",border:"1px solid rgba(110,180,255,0.3)",borderRadius:6,padding:"3px 8px",color:"#9cc9ff",fontSize:11,cursor:"pointer"}}>+ {name}</button>)}</div>}
               <textarea value={form[shKey]} onChange={e=>set(shKey,e.target.value)} placeholder={"23' S. Brauner\n87' L. Schwarzenbach"}/>
             </div>
             <div>
               <label>Torschützen Gast</label>
-              {roster.length>0 && form[sideKey]==="away" && <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:6,marginTop:6}}>{roster.map(name=><button key={name} onClick={()=>appendScorer(saKey,name)} style={{background:"rgba(110,180,255,0.12)",border:"1px solid rgba(110,180,255,0.3)",borderRadius:6,padding:"3px 8px",color:"#9cc9ff",fontSize:11,cursor:"pointer"}}>+ {name}</button>)}</div>}
               <textarea value={form[saKey]} onChange={e=>set(saKey,e.target.value)} placeholder={"5' F. Stöckeler\n33' E. Gresser"}/>
             </div>
           </div>
@@ -881,9 +859,6 @@ export default function App() {
         <div style={{display:"flex",gap:8}}>
           <button onClick={()=>setShowLogos(v=>!v)} style={{background:"rgba(255,255,255,0.1)",border:"1.5px solid rgba(255,255,255,0.2)",borderRadius:8,padding:"8px 14px",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer"}}>
             🛡️ Logos {logoLib.length>0&&<span style={{background:"#2233d4",borderRadius:10,padding:"1px 7px",fontSize:11,marginLeft:4}}>{logoLib.length}</span>}
-          </button>
-          <button onClick={()=>setShowRoster(v=>!v)} style={{background:"rgba(255,255,255,0.1)",border:"1.5px solid rgba(255,255,255,0.2)",borderRadius:8,padding:"8px 14px",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer"}}>
-            👥 Kader {roster.length>0&&<span style={{background:"#2233d4",borderRadius:10,padding:"1px 7px",fontSize:11,marginLeft:4}}>{roster.length}</span>}
           </button>
           <button onClick={()=>setShowTpl(v=>!v)} style={{background:"rgba(255,255,255,0.1)",border:"1.5px solid rgba(255,255,255,0.2)",borderRadius:8,padding:"8px 14px",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer"}}>
             💾 Vorlagen
@@ -921,30 +896,7 @@ export default function App() {
         </div>
       )}
 
-      {/* Kader Panel */}
-      {showRoster && (
-        <div style={{background:"#111a4a",borderBottom:"1px solid rgba(255,255,255,0.1)",padding:"16px 22px"}}>
-          <div style={{maxWidth:1080,margin:"0 auto"}}>
-            <div style={{fontWeight:700,fontSize:13,marginBottom:12,color:"rgba(255,255,255,0.7)"}}>👥 Kader — einmal anlegen, bei Torschützen per Klick hinzufügen</div>
-            <div style={{display:"flex",gap:10,alignItems:"center",marginBottom:16,flexWrap:"wrap"}}>
-              <input value={newPlayer} onChange={e=>setNewPlayer(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addPlayer()} placeholder="Spielername (z. B. S. Brauner)" style={{flex:1,minWidth:180,background:"rgba(255,255,255,0.08)",border:"1.5px solid rgba(255,255,255,0.15)",borderRadius:8,padding:"9px 12px",color:"#fff",fontSize:14,outline:"none"}}/>
-              <button onClick={addPlayer} disabled={!newPlayer.trim()} style={{background:newPlayer.trim()?"#2233d4":"rgba(255,255,255,0.1)",border:"none",borderRadius:8,padding:"9px 18px",color:"#fff",fontWeight:700,fontSize:13,cursor:newPlayer.trim()?"pointer":"not-allowed",whiteSpace:"nowrap"}}>+ Hinzufügen</button>
-            </div>
-            {roster.length===0
-              ? <div style={{fontSize:13,color:"rgba(255,255,255,0.3)"}}>Noch keine Spieler. Namen eingeben und hinzufügen.</div>
-              : <div style={{display:"flex",flexWrap:"wrap",gap:10}}>
-                  {roster.map(name=>(
-                    <div key={name} style={{background:"rgba(255,255,255,0.07)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:10,padding:"6px 10px",display:"flex",alignItems:"center",gap:8}}>
-                      <span style={{fontSize:13,fontWeight:600}}>{name}</span>
-                      <button onClick={()=>removePlayer(name)} style={{background:"rgba(255,60,60,0.15)",border:"1px solid rgba(255,60,60,0.3)",borderRadius:6,padding:"3px 8px",color:"#ff8080",fontSize:12,cursor:"pointer"}}>✕</button>
-                    </div>
-                  ))}
-                </div>
-            }
-            <div style={{marginTop:10,fontSize:11,color:"rgba(255,255,255,0.25)"}}>💡 Bei "Torschützen" im Spielbericht kannst du auf einen Spieler klicken, statt den Namen zu tippen.</div>
-          </div>
-        </div>
-      )}
+
 
       {showTpl && (
         <div style={{background:"#111a4a",borderBottom:"1px solid rgba(255,255,255,0.1)",padding:"16px 22px"}}>
